@@ -1,4 +1,3 @@
-// src/websocket/GameHandler.js
 class GameHandler {
     constructor(wsManager) {
       this.wsManager = wsManager;
