@@ -1,0 +1,14 @@
+{
+  "name": "shootingapp-server",
+  "version": "1.0.0",
+  "description": "Shooting App Game Server",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
