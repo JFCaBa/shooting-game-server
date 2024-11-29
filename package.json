@@ -4,6 +4,7 @@
   "description": "Shooting App Game Server",
   "main": "src/index.js",
   "scripts": {
+    "migrate": "node -e 'require(\"./src/db/migrate.js\")()'",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "jest"

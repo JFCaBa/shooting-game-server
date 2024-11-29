@@ -1,16 +1,26 @@
 const logger = require('../utils/logger');
-const TokenService = require('../services/TokenService');
+// const TokenService = require('../services/TokenService');
+const TokenBalanceService = require('../services/TokenBalanceService');
+const gameConfig = require('../config/gameConfig');
 
 class GameHandler {
     constructor(wsManager) {
         this.wsManager = wsManager;
-        this.tokenService = new TokenService();
+        // this.tokenService = new TokenService();
+        this.tokenBalanceService = new TokenBalanceService();
+        this.REWARDS = {
+            HIT: 1,
+            KILL: 5
+          };
     }
 
     handleJoin(data, playerId, ws) {
         if (!this.wsManager.clients.has(playerId)) {
-            logger.info(`Registering new player: ${playerId}`);
-            this.wsManager.clients.set(playerId, ws);
+          logger.info(`Registering new player: ${playerId}`);
+          this.wsManager.clients.set(playerId, ws);
+        }
+        else {
+            logger.info(`Already registered`)
         }
         this.wsManager.broadcastToAll(data, playerId);
     }
@@ -22,17 +32,19 @@ class GameHandler {
     async handleHit(data, playerId) {
         const { targetPlayerId, type } = data;
         try {
-            if (type === 'hitConfirmed') {
-                await this.tokenService.addTokensForHit(playerId);
-            } else if (type === 'kill') {
-                await this.tokenService.addTokensForKill(playerId);
-            }
-            
-            if (targetPlayerId && this.wsManager.clients.has(targetPlayerId)) {
-                this.wsManager.clients.get(targetPlayerId).send(JSON.stringify(data));
-            }
+          const reward = type === 'kill' ? this.REWARDS.KILL : this.REWARDS.HIT;
+          
+          if (type === 'hitConfirmed' || type === 'kill') {
+            await this.tokenBalanceService.updateBalance(targetPlayerId, reward);
+            logger.info(`${targetPlayerId} rewarded with ${reward} tokens`)
+          }
+
+          if (targetPlayerId && this.wsManager.clients?.has(targetPlayerId)) {
+            this.wsManager.clients.get(targetPlayerId).send(JSON.stringify(data));
+            logger.info(`From ${targetPlayerId} to ${playerId}`)
+          }
         } catch (error) {
-            logger.error('Error handling hit:', error);
+          logger.error('Error handling hit:', error);
         }
     }
 
