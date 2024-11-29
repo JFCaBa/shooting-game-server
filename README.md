@@ -1,47 +1,85 @@
-# ShootingApp Server
+# ShootingApp Game Server
 
-WebSocket server for the ShootingApp iOS game.
+Real-time multiplayer game server supporting player interactions, achievements, and wallet connections.
 
-## Features
-- Real-time player connections
-- Message broadcasting
-- Session management
-- Game state synchronization
+## Prerequisites
 
-## Requirements
-- Node.js 14.0+
-- npm or yarn
+- Node.js >= 14
+- MongoDB >= 6.0
+- MetaMask wallet
 
-## Installation
-1. Clone the repository
+## Setup
+
 ```bash
-git clone https://github.com/yourusername/ShootingApp-Server.git
-```
-
-2. Install dependencies
-```bash
+# Install dependencies
 npm install
+
+# Configure MongoDB
+mongosh
+# Create admin user in MongoDB shell
+use admin
+db.createUser({
+  user: "admin",
+  pwd: "your_secure_password", 
+  roles: ["userAdminAnyDatabase", "readWriteAnyDatabase"]
+})
+
+# Create app user
+use shootingapp
+db.createUser({
+  user: "gameserver",
+  pwd: "another_secure_password",
+  roles: ["readWrite"]
+})
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your credentials
 ```
 
-3. Start the server
+## Development
+
+```bash
+npm run dev
+```
+
+## Production
+
 ```bash
 npm start
 ```
 
-## Environment
-The server runs on port 8182 by default. Configure through environment variables if needed.
+## Endpoints
 
-## WebSocket Protocol
-Messages follow this format:
-```typescript
-interface GameMessage {
-    type: 'join' | 'shoot' | 'hit' | 'leave';
-    playerId: string;
-    data: {
-        player?: Player;
-        shotId?: string;
-        hitPlayerId?: string;
-    };
-    timestamp: string;
+- WebSocket: `ws://localhost:8182`
+- API: `http://localhost:3000`
+- Health Check: `http://localhost:3000/health`
+
+## Game Messages
+
+```javascript
+{
+  type: 'shoot' | 'hit' | 'hitConfirmed' | 'kill' | 'leave',
+  playerId: string,
+  data: {
+    player: {
+      location: {
+        latitude: number,
+        longitude: number,
+        altitude: number,
+        accuracy: number
+      },
+      heading: number
+    },
+    shotId?: string,
+    hitPlayerId?: string,
+    damage?: number
+  },
+  timestamp: string,
+  targetPlayerId?: string
 }
 ```
+
+## License
+
+MIT
