@@ -1,3 +1,4 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
@@ -9,7 +10,9 @@ const connectDB = async () => {
 
     const conn = await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 30000,  // 30 seconds
+      socketTimeoutMS: 30000  // 30 seconds
     });
 
     logger.info(`MongoDB Connected: ${conn.connection.host}`);

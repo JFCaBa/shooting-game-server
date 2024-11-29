@@ -18,6 +18,18 @@ const playerSchema = new mongoose.Schema({
   lastActive: {
     type: Date,
     default: Date.now
+  },
+  mintedBalance: {
+    type: Number,
+    default: 0
+  },
+  pendingBalance: {
+    type: Number,
+    default: 0
+  },
+  lastUpdate: {
+    type: Date,
+    default: Date.now
   }
 });
 

@@ -1,13 +1,13 @@
 const logger = require('../utils/logger');
 // const TokenService = require('../services/TokenService');
-const TokenBalanceService = require('../services/TokenBalanceService');
+const PlayerService = require('../services/PlayerService');
 const gameConfig = require('../config/gameConfig');
 
 class GameHandler {
     constructor(wsManager) {
         this.wsManager = wsManager;
         // this.tokenService = new TokenService();
-        this.tokenBalanceService = new TokenBalanceService();
+        this.playerService = new PlayerService();
         this.REWARDS = {
             HIT: 1,
             KILL: 5
@@ -35,8 +35,8 @@ class GameHandler {
           const reward = type === 'kill' ? this.REWARDS.KILL : this.REWARDS.HIT;
           
           if (type === 'hitConfirmed' || type === 'kill') {
-            await this.tokenBalanceService.updateBalance(targetPlayerId, reward);
-            logger.info(`${targetPlayerId} rewarded with ${reward} tokens`)
+            const balance = await this.playerService.updateBalance(targetPlayerId, reward);
+            logger.info(`${targetPlayerId} rewarded with ${reward} tokens, balance ${balance}`)
           }
 
           if (targetPlayerId && this.wsManager.clients?.has(targetPlayerId)) {

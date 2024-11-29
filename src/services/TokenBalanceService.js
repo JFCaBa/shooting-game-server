@@ -7,6 +7,7 @@ class TokenBalanceService {
 
   async updateBalance(playerId, amount) {
     try {
+      // Add tokens to the pending balance
       const balance = await this.TokenBalance.findOneAndUpdate(
         { playerId },
         {
@@ -15,6 +16,14 @@ class TokenBalanceService {
         },
         { upsert: true, new: true }
       );
+  
+      // Optionally, transfer from pending to minted after some action/confirmation
+      if (balance.pendingBalance >= 0) {
+        balance.mintedBalance += balance.pendingBalance;
+        balance.pendingBalance = 0;  // Reset pending balance
+        await balance.save();  // Save the balance after moving tokens to minted
+      }
+  
       return balance;
     } catch (error) {
       logger.error('Error updating token balance:', error);

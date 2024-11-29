@@ -5,6 +5,7 @@ const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const WebSocketManager = require('./websocket/WebSocketManager');
+const playerRoutes = require('./routes/playerRoutes');
 const logger = require('./utils/logger');
 
 const app = express();
@@ -19,6 +20,9 @@ app.use(express.json());
 
 // WebSocket Setup
 const wsManager = new WebSocketManager(server);
+
+// Player Routes
+app.use('/api/v1', playerRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {
