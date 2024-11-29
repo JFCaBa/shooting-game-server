@@ -7,20 +7,27 @@ class GameHandler {
         this.tokenService = new TokenService();
     }
 
+    handleJoin(data, playerId, ws) {
+        if (!this.wsManager.clients.has(playerId)) {
+            logger.info(`Registering new player: ${playerId}`);
+            this.wsManager.clients.set(playerId, ws);
+        }
+        this.wsManager.broadcastToAll(data, playerId);
+    }
+
     handleShot(data, playerId) {
         this.wsManager.broadcastToAll(data, playerId);
     }
 
     async handleHit(data, playerId) {
         const { targetPlayerId, type } = data;
-        
         try {
             if (type === 'hitConfirmed') {
                 await this.tokenService.addTokensForHit(playerId);
             } else if (type === 'kill') {
                 await this.tokenService.addTokensForKill(playerId);
             }
-
+            
             if (targetPlayerId && this.wsManager.clients.has(targetPlayerId)) {
                 this.wsManager.clients.get(targetPlayerId).send(JSON.stringify(data));
             }
