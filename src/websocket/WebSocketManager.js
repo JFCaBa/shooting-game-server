@@ -1,22 +1,13 @@
 const WebSocket = require('ws');
 const logger = require('../utils/logger');
-const PlayerService = require('../services/PlayerService');
 const GameHandler = require('./GameHandler');
 
 class WebSocketManager {
   constructor(server) {
     this.wss = new WebSocket.Server({ server });
-    this.clients = new Map(); // WebSocket connections in memory
-    this.playerService = new PlayerService();
+    this.clients = new Map();
     this.gameHandler = new GameHandler(this);
     this.setupWebSocket();
-    this.startCleanupInterval();
-  }
-
-  startCleanupInterval() {
-    setInterval(async () => {
-      await this.playerService.removeInactivePlayers();
-    }, 60000); // Run every minute
   }
 
   setupWebSocket() {
@@ -36,7 +27,6 @@ class WebSocketManager {
         if (!this.clients.has(playerId)) {
           logger.info(`Registering new player: ${playerId}`);
           this.clients.set(playerId, ws);
-          await this.playerService.updatePlayerStatus(playerId, data.data?.player);
         }
 
         this.handleMessage(data, playerId);
@@ -53,16 +43,11 @@ class WebSocketManager {
     });
   }
 
-  async handleMessage(data, playerId) {
+  handleMessage(data, playerId) {
     logger.info('Message received:', {
       type: data.type,
       from: playerId
     });
-
-    // Update player data in MongoDB
-    if (data.data?.player) {
-      await this.playerService.updatePlayerStatus(playerId, data.data.player);
-    }
 
     switch (data.type) {
       case 'shoot':
@@ -78,13 +63,8 @@ class WebSocketManager {
 
   broadcastToAll(message, senderId) {
     const messageStr = JSON.stringify(message);
-    logger.debug('Broadcasting message:', {
-      sender: senderId,
-      type: message.type,
-      recipients: Array.from(this.clients.keys()).filter(id => id !== senderId)
-    });
-
     let sentCount = 0;
+    
     this.clients.forEach((ws, id) => {
       if (id !== senderId) {
         ws.send(messageStr);
