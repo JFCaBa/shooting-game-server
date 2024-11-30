@@ -17,16 +17,29 @@ class GameHandler {
     handleJoin(data, playerId, ws) {
         if (!this.wsManager.clients.has(playerId)) {
             logger.info(`Registering new player: ${playerId}`);
+    
+            // Add the new player to WebSocket manager
             this.wsManager.clients.set(playerId, ws);
-            this.initPlayerStats(playerId);
-            this.startSurvivalTracking(playerId);
+    
+            // Fetch or create the player in the database
+            this.playerService.getPlayer(playerId)  // This will create the player if not found
+                .then(() => {
+                    // Initialize player stats
+                    this.initPlayerStats(playerId);
+                    
+                    // Start tracking survival
+                    this.startSurvivalTracking(playerId);
+                })
+                .catch((error) => {
+                    logger.error(`Error registering new player: ${error.message}`);
+                });
+        } else {
+            logger.info(`Player ${playerId} is already connected.`);
         }
-        else {
-            logger.info(`Already registered`)
-        }
+    
         this.wsManager.broadcastToAll(data, playerId);
     }
-
+    
     handleShot(data, playerId) {
         const stats = this.getPlayerStats(playerId);
         stats.shots++;

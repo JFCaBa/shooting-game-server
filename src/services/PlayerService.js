@@ -65,20 +65,20 @@ class PlayerService {
 
   async adReward(playerId) {
     try {
-      // Add tokens to the pending balance
-      const reward = await Player.findOneAndUpdate(
-        { playerId },
-        {
-          $inc: { pendingBalance: 10 }, // 10 Tokens will be added
-          $set: { lastUpdate: new Date() }
-        },
-        { upsert: true, new: true }
-      );
-  
-      return reward;
+        const reward = await Player.findOneAndUpdate(
+            { playerId },
+            {
+                $inc: { pendingBalance: 10 }, // 10 Tokens will be added
+                $set: { lastUpdate: new Date() }
+            },
+            { upsert: true, new: true } // Options: upsert and return the updated document
+        );
+
+        logger.info('Reward result:', reward);
+        return reward;
     } catch (error) {
-      logger.error('Error updating token balance:', error);
-      throw error;
+        logger.error('Error updating token balance:', error);
+        throw error;
     }
   }
 
@@ -129,6 +129,38 @@ class PlayerService {
     } catch (error) {
       logger.error(`Error updating player status for ${playerId}: ${error.message}`);
       throw new Error('Failed to update player status');
+    }
+  }
+
+  async getPlayer(playerId) {
+    try {
+        let player = await Player.findOne({ playerId });
+        if (!player) {
+            // If the player is not found, create a new one
+            player = await this.createOrUpdatePlayer(playerId);
+        }
+        return player;
+    } catch (error) {
+        throw new Error(`Error fetching player: ${error.message}`);
+    }
+  }
+
+  // Method to create or update player
+  async createOrUpdatePlayer(playerId) {
+    try {
+        const player = await Player.findOneAndUpdate(
+            { playerId },
+            { $set: { playerId, lastUpdate: new Date() } },
+            { upsert: true, new: true }
+        );
+        if (player) {
+            logger.info(`Player created/updated: ${playerId}`);
+        } else {
+            logger.warn(`Player creation failed for: ${playerId}`);
+        }
+        return player;
+    } catch (error) {
+        throw new Error(`Error creating/updating player: ${error.message}`);
     }
   }
 
