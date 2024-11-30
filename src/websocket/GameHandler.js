@@ -34,6 +34,13 @@ class GameHandler {
         this.wsManager.broadcastToAll(data, playerId);
     }
 
+    handleShotConfirmed(data, playerId) {
+      const stats = this.getPlayerStats(playerId);
+      stats.shots++;
+      this.updateAccuracy(playerId, stats);
+      this.wsManager.broadcastToAll(data, playerId);
+    }
+
     async handleHit(data, playerId) {
         const { targetPlayerId, type } = data;
         const stats = this.getPlayerStats(playerId);

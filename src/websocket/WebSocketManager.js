@@ -50,6 +50,9 @@ class WebSocketManager {
             case 'shoot':
                 this.gameHandler.handleShot(data, playerId);
                 break;
+            case 'shootConfirmed':
+                this.gameHandler.handleShotConfirmed(data, playerId);
+                break;
             case 'hit':
             case 'hitConfirmed':
             case 'kill':
