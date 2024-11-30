@@ -63,6 +63,25 @@ class PlayerService {
     }
   }
 
+  async adReward(playerId) {
+    try {
+      // Add tokens to the pending balance
+      const reward = await Player.findOneAndUpdate(
+        { playerId },
+        {
+          $inc: { pendingBalance: 10 }, // 10 Tokens will be added
+          $set: { lastUpdate: new Date() }
+        },
+        { upsert: true, new: true }
+      );
+  
+      return reward;
+    } catch (error) {
+      logger.error('Error updating token balance:', error);
+      throw error;
+    }
+  }
+
   // Transfer tokens between players
   async transferTokens(fromPlayerId, toWalletAddress, amount) {
     const fromPlayer = await this.findPlayerById(fromPlayerId);
