@@ -4,8 +4,12 @@ const playerService = new PlayerService();  // Instantiate the class
 exports.getTokenBalance = async (req, res) => {
   try {
     const { playerId } = req.params;
-    const balance = await playerService.getTokenBalance(playerId);  // Call the method
-    res.json({ balance });
+    
+    // Call the method
+    const { mintedBalance, totalBalance } = await playerService.getTokenBalance(playerId);
+    
+    // Respond with both balances
+    res.json({ mintedBalance, totalBalance });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
