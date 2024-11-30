@@ -1,13 +1,16 @@
 module.exports = {
-    async up(db) {
-      await db.collection('players').updateMany(
-        { walletAddress: { $exists: false } },
-        { $set: { walletAddress: null } }
+    async up(db, client) {
+      const players = db.collection('players');
+      await players.updateMany(
+        {},
+        { $set: { walletAddress: null } },
+        { upsert: false, multi: true }
       );
     },
   
-    async down(db) {
-      await db.collection('players').updateMany(
+    async down(db, client) {
+      const players = db.collection('players');
+      await players.updateMany(
         { walletAddress: null },
         { $unset: { walletAddress: "" } }
       );
