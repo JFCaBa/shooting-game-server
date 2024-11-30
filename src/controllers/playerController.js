@@ -29,10 +29,9 @@ exports.transferTokens = async (req, res) => {
 exports.adReward = async (req, res) => {
   logger.debug("adReward endpoint hit with body:", req.body); 
   try {
-    const { playerId } = req.body;
-    await playerService.adReward(playerId);
-    logger.debug(`Reward tokens added succesfully to: ${playerId}`)
-    res.json({ message: 'Reward tokens added successfully', ammount: 10 });
+    const { walletAddress } = req.body;
+    await playerService.adReward(walletAddress);
+    res.json({ message: 'Reward tokens added successfully', amount: 10 });
   } catch (error) {
     res.status(500).json({ error: error.message });
     logger.error(error)
