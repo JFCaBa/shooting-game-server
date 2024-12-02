@@ -11,6 +11,14 @@ const playerSchema = new mongoose.Schema({
         required: false,
         default: null
     },
+    pushToken: {
+        type: String,
+        default: null
+    },
+    pushTokenUpdatedAt: {
+        type: Date,
+        default: null
+    },
     stats: {
         kills: { type: Number, default: 0 },
         hits: { type: Number, default: 0 },

@@ -104,15 +104,33 @@ class GameHandler {
         }
     }
 
-    handleDisconnect(playerId) {
-        this.wsManager.clients.delete(playerId);
-        this.playerStats.delete(playerId);
-        this.wsManager.broadcastToAll({
+    handleDisconnect(playerId) {        
+        const now = new Date().toISOString();
+        const leaveMessage = {
             type: 'leave',
             playerId,
-            data: { player: null },
-            timestamp: new Date().toISOString()
-        }, playerId);
+            data: {
+                player: {
+                    id: playerId,
+                    location: {
+                        latitude: 0,
+                        longitude: 0,
+                        altitude: 0,
+                        accuracy: 0
+                    },
+                    heading: 0,
+                    timestamp: now  
+                },
+                shotId: null,
+                hitPlayerId: null,
+                damage: null
+            },
+            timestamp: now
+        };
+        
+        this.wsManager.broadcastToAll(leaveMessage, playerId);
+        this.wsManager.clients.delete(playerId);
+        this.playerStats.delete(playerId);
     }
 
     initPlayerStats(playerId) {
