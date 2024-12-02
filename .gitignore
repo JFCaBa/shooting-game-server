@@ -6,6 +6,9 @@
 # Enviroment
 .env
 
+# Keys
+serviceAccountKey.json
+
 # User-specific files
 *.rsuser
 *.suo

@@ -1,12 +1,15 @@
 const WebSocket = require('ws');
 const logger = require('../utils/logger');
 const GameHandler = require('./GameHandler');
+const Player = require('../models/Player');
+const NotificationService = require('../services/NotificationService');
 
 class WebSocketManager {
     constructor(server) {
         this.wss = new WebSocket.Server({ server });
         this.clients = new Map();
         this.gameHandler = new GameHandler(this);
+        this.notificationService = new NotificationService();
         this.setupWebSocket();
     }
 
@@ -37,7 +40,7 @@ class WebSocketManager {
         });
     }
 
-    handleMessage(data, playerId, ws) {
+    async handleMessage(data, playerId, ws) {
         logger.info('Message received:', {
             type: data.type,
             from: playerId
@@ -45,7 +48,12 @@ class WebSocketManager {
 
         switch (data.type) {
             case 'join':
+                // Store the push token if provided
+                if (data.pushToken) {
+                    this.updatePlayerPushToken(playerId, data.pushToken);
+                }
                 this.gameHandler.handleJoin(data, playerId, ws);
+                await this.notificationService.notifyPlayersAboutNewJoin(data.data.player, playerId);
                 break;
             case 'shoot':
                 this.gameHandler.handleShot(data, playerId);
@@ -71,8 +79,23 @@ class WebSocketManager {
                 sentCount++;
             }
         });
+    }
 
-        logger.debug(`Message sent to ${sentCount} clients`);
+    async updatePlayerPushToken(playerId, pushToken) {
+        try {
+            await Player.findOneAndUpdate(
+                { playerId },
+                { 
+                    $set: { 
+                        pushToken,
+                        pushTokenUpdatedAt: new Date()
+                    }
+                },
+                { upsert: true }
+            );
+        } catch (error) {
+            logger.error('Error updating push token:', error);
+        }
     }
 }
 
