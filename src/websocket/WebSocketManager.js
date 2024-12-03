@@ -2,14 +2,14 @@ const WebSocket = require('ws');
 const logger = require('../utils/logger');
 const GameHandler = require('./GameHandler');
 const Player = require('../models/Player');
-const NotificationService = require('../services/NotificationService');
+const notificationService = require('../services/NotificationService');
 
 class WebSocketManager {
     constructor(server) {
         this.wss = new WebSocket.Server({ server });
         this.clients = new Map();
         this.gameHandler = new GameHandler(this);
-        this.notificationService = new NotificationService();
+        this.notificationService = notificationService;
         this.setupWebSocket();
     }
 
@@ -48,12 +48,11 @@ class WebSocketManager {
 
         switch (data.type) {
             case 'join':
-                // Store the push token if provided
                 if (data.pushToken) {
-                    this.updatePlayerPushToken(playerId, data.pushToken);
+                    await this.updatePlayerPushToken(playerId, data.pushToken);
                 }
                 this.gameHandler.handleJoin(data, playerId, ws);
-                await this.notificationService.notifyPlayersAboutNewJoin(data.data.player, playerId);
+                await this.notificationService.notifyPlayersAboutNewJoin(data.data.player);
                 break;
             case 'shoot':
                 this.gameHandler.handleShot(data, playerId);
@@ -85,8 +84,8 @@ class WebSocketManager {
         try {
             await Player.findOneAndUpdate(
                 { playerId },
-                { 
-                    $set: { 
+                {
+                    $set: {
                         pushToken,
                         pushTokenUpdatedAt: new Date()
                     }

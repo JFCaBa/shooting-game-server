@@ -82,7 +82,6 @@ class GameHandler {
             
             if (type === 'hitConfirmed' || type === 'kill') {
                 const balance = await this.playerService.updateBalance(targetPlayerId, reward);
-                logger.info(`${targetPlayerId} rewarded with ${reward} tokens, balance ${balance}`);
                 
                 if (type === 'hitConfirmed') {
                     stats.hits++;
@@ -97,7 +96,6 @@ class GameHandler {
 
             if (targetPlayerId && this.wsManager.clients?.has(targetPlayerId)) {
                 this.wsManager.clients.get(targetPlayerId).send(JSON.stringify(data));
-                logger.info(`From ${targetPlayerId} to ${playerId}`);
             }
         } catch (error) {
             logger.error('Error handling hit:', error);
@@ -135,11 +133,19 @@ class GameHandler {
 
     initPlayerStats(playerId) {
         this.playerStats.set(playerId, {
+            id: playerId,
             shots: 0,
             hits: 0,
             kills: 0,
             accuracy: 100,
-            survivalStart: Date.now()
+            survivalStart: Date.now().toISOString,
+            location: {
+                latitude: 0, // Default latitude
+                longitude: 0, // Default longitude
+                altitude: 0, // Default altitude
+                accuracy: 0, // Default accuracy
+            },
+            heading: 0 // Default heading
         });
     }
 
