@@ -22,7 +22,8 @@ const playerSchema = new mongoose.Schema({
     stats: {
         kills: { type: Number, default: 0 },
         hits: { type: Number, default: 0 },
-        deaths: { type: Number, default: 0 }
+        deaths: { type: Number, default: 0 },
+        survivalStart: { type: Date, default: Date.now }
     },
     lastActive: {
         type: Date,

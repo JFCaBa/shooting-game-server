@@ -3,6 +3,7 @@ const PlayerService = require('../services/PlayerService');
 const AchievementService = require('../services/AchievementService');
 const RewardService = require('../services/RewardService');
 const gameConfig = require('../config/gameConfig');
+const Player = require('../models/Player');
 
 class GameHandler {
     constructor(wsManager) {
@@ -30,28 +31,39 @@ class GameHandler {
                 }
 
                 await this.playerService.updateBalance(targetPlayerId, gameConfig.TOKENS.HIT);
+
+                await Player.findOneAndUpdate(
+                    { playerId: targetPlayerId },
+                    { $inc: { 'stats.hits': 1 } }
+                );
             } 
             else if (type === 'kill') {
                 stats.kills++;
+
+                // Update MongoDB
+                if (targetPlayerId) {
+                    await Player.findOneAndUpdate(
+                        { playerId: targetPlayerId },
+                        { $inc: { 'stats.kills': 1 } }
+                    );
+                }
+
                 logger.info(`Tracking kill achievement for ${targetPlayerId}, kills: ${stats.kills}`);
                 await AchievementService.trackAchievement(targetPlayerId, 'kills', stats.kills);
                 await this.playerService.updateBalance(targetPlayerId, gameConfig.TOKENS.KILL);
+
+                // Update death count for target
+                if (playerId) {
+                    await Player.findOneAndUpdate(
+                        { playerId: playerId },
+                        { $inc: { 'stats.deaths': 1 } }
+                    );
+                }
             }
 
             if (targetPlayerId && this.wsManager.clients?.has(targetPlayerId)) {
                 this.wsManager.clients.get(targetPlayerId).send(JSON.stringify(data));
             }
-
-            // Update stored stats
-            this.playerStats.set(targetPlayerId, stats);
-
-            logger.info(`Player ${targetPlayerId} ${type}, stats:`, {
-                shots: stats.shots,
-                hits: stats.hits,
-                kills: stats.kills,
-                accuracy: stats.accuracy,
-                timestamp: new Date().toISOString()
-            });
 
         } catch (error) {
             logger.error('Error handling hit:', error);
@@ -75,9 +87,9 @@ class GameHandler {
         }
     }
 
-    getPlayerStats(playerId) {
+    async getPlayerStats(playerId) {
         if (!this.playerStats.has(playerId)) {
-            this.initPlayerStats(playerId);
+            await this.initPlayerStats(playerId);
         }
         return {...this.playerStats.get(playerId)};
     }
@@ -150,24 +162,51 @@ class GameHandler {
         }, trackInterval);
     }
 
-    initPlayerStats(playerId) {
+    async initPlayerStats(playerId) {
         const now = new Date();
-        this.playerStats.set(playerId, {
-            id: playerId,
-            shots: 0,
-            hits: 0,
-            kills: 0,
-            accuracy: 0,
-            survivalStart: now.toISOString(), // Ensure it's a string
-            location: {
-                latitude: 0,
-                longitude: 0,
-                altitude: 0,
+        
+        try {
+            // Load existing player from DB
+            const existingPlayer = await Player.findOne({ playerId });
+            
+            const baseStats = {
+                id: playerId,
+                shots: 0,
+                hits: existingPlayer?.stats?.hits || 0,
+                kills: existingPlayer?.stats?.kills || 0,
                 accuracy: 0,
-            },
-            heading: 0
-        });
-        logger.info(`Initialized stats for player ${playerId} at ${now.toISOString()}`);
+                survivalStart: existingPlayer?.stats?.survivalStart || Date.now,
+                location: {
+                    latitude: 0,
+                    longitude: 0,
+                    altitude: 0,
+                    accuracy: 0,
+                },
+                heading: 0
+            };
+    
+            this.playerStats.set(playerId, baseStats);
+            logger.info(`Loaded stats for player ${playerId}: hits=${baseStats.hits}, kills=${baseStats.kills}`);
+            
+        } catch (error) {
+            logger.error(`Error loading stats for player ${playerId}:`, error);
+            // Set default stats if loading fails
+            this.playerStats.set(playerId, {
+                id: playerId,
+                shots: 0,
+                hits: 0,
+                kills: 0,
+                accuracy: 0,
+                survivalStart: now.toISOString(),
+                location: {
+                    latitude: 0,
+                    longitude: 0,
+                    altitude: 0,
+                    accuracy: 0,
+                },
+                heading: 0
+            });
+        }
     }
 
     handleJoin(data, playerId, ws) {

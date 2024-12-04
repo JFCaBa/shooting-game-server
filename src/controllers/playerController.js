@@ -1,5 +1,7 @@
 const PlayerService = require('../services/PlayerService');
 const logger = require('../utils/logger');
+const Player = require('../models/Player');
+
 const playerService = new PlayerService();  // Instantiate the class
 
 exports.getTokenBalance = async (req, res) => {
@@ -35,5 +37,24 @@ exports.adReward = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
     logger.error(error)
+  }
+};
+
+exports.getPlayerStats = async (req, res) => {
+  try {
+      const { playerId } = req.params;
+      const player = await Player.findOne({ playerId });
+      
+      if (!player) {
+          return res.status(404).json({ error: 'Player not found' });
+      }
+
+      res.json({
+          stats: player.stats,
+          lastActive: player.lastActive
+      });
+  } catch (error) {
+      logger.error('Error fetching player stats:', error);
+      res.status(500).json({ error: error.message });
   }
 };
