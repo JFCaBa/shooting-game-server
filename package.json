@@ -7,24 +7,28 @@
     "migrate": "node -e 'require(\"./src/db/migrate.js\")()'",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest"
+    "test": "jest",
+    "lint": "eslint src/**/*.js",
+    "clean": "node src/scripts/deletePlayers.js"
   },
   "engines": {
     "node": ">=14.0.0"
   },
   "dependencies": {
-    "abis": "^1.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "firebase-admin": "^13.0.1",
-    "helmet": "^8.0.0",
-    "mongoose": "^8.8.3",
-    "web3": "^1.8.2",
-    "winston": "^3.17.0",
-    "ws": "^8.18.0"
+    "abis": "1.0.0",
+    "cors": "2.8.5",
+    "dotenv": "16.4.5",
+    "express": "4.21.1",
+    "firebase-admin": "13.0.1",
+    "helmet": "8.0.0",
+    "mongoose": "8.8.3",
+    "web3": "1.8.2",
+    "winston": "3.17.0",
+    "ws": "8.18.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "nodemon": "3.1.7"
   }
 }
