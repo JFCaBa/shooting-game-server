@@ -61,9 +61,12 @@ class WebSocketManager {
                 this.gameHandler.handleShotConfirmed(data, playerId);
                 break;
             case 'hit':
+                break;
             case 'hitConfirmed':
+                this.gameHandler.handleHitConfirmed(data, playerId);
+                break;
             case 'kill':
-                this.gameHandler.handleHit(data, playerId);
+                this.gameHandler.handleKill(data, data.senderId);
                 break;
         }
     }

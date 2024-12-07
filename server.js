@@ -37,7 +37,7 @@ wss.on('connection', (ws, req) => {
                 case 'hit':
                 case 'hitConfirmed':
                 case 'kill':
-                    const targetId = data.targetPlayerId;
+                    const targetId = data.senderId;
                     console.log(`Sending ${data.type} to target: ${targetId}`);
                     if (targetId && clients.has(targetId)) {
                         clients.get(targetId).send(JSON.stringify(data));
