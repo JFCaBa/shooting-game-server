@@ -30,8 +30,6 @@ class GameHandler {
                     await AchievementService.trackAchievement(targetPlayerId, 'accuracy', stats.accuracy);
                 }
 
-                await this.playerService.updateBalance(targetPlayerId, gameConfig.TOKENS.HIT);
-
                 await Player.findOneAndUpdate(
                     { playerId: targetPlayerId },
                     { $inc: { 'stats.hits': 1 } }
@@ -50,7 +48,6 @@ class GameHandler {
 
                 logger.info(`Tracking kill achievement for ${targetPlayerId}, kills: ${stats.kills}`);
                 await AchievementService.trackAchievement(targetPlayerId, 'kills', stats.kills);
-                await this.playerService.updateBalance(targetPlayerId, gameConfig.TOKENS.KILL);
 
                 // Update death count for target
                 if (playerId) {

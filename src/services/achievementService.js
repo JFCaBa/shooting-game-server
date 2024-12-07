@@ -13,37 +13,44 @@ class AchievementService {
                 return null;
             }
 
-            // Find the next milestone that hasn't been achieved yet
-            const nextMilestone = milestones.find(m => value >= m);
-            if (!nextMilestone) {
-                logger.info(`No milestone reached for ${type}: ${value}`);
-                return null;
+            // Find all milestones that should be awarded
+            const eligibleMilestones = milestones.filter(m => value >= m);
+            let latestAchievement = null;
+
+            for (const milestone of eligibleMilestones) {
+                // Check if already achieved
+                const existingAchievement = await Achievement.findOne({
+                    playerId,
+                    type,
+                    milestone
+                });
+
+                if (!existingAchievement) {
+                    // Create and save new achievement
+                    const achievement = new Achievement({
+                        playerId,
+                        type,
+                        milestone,
+                        unlockedAt: new Date()
+                    });
+                    await achievement.save();
+
+                    // Add reward tokens if configured
+                    const reward = gameConfig.ACHIEVEMENT_REWARDS[type]?.[milestone];
+                    if (reward) {
+                        await Player.findOneAndUpdate(
+                            { playerId },
+                            { $inc: { pendingBalance: reward } }
+                        );
+                        logger.info(`Added ${reward} tokens for achievement ${type} ${milestone}`);
+                    }
+
+                    latestAchievement = achievement;
+                    logger.info(`New achievement created for ${playerId}: ${type} ${milestone}`);
+                }
             }
 
-            // Check if this milestone was already achieved
-            const existingAchievement = await Achievement.findOne({
-                playerId,
-                type,
-                milestone: nextMilestone
-            });
-
-            if (existingAchievement) {
-                logger.info(`Achievement already exists for ${playerId}: ${type} ${nextMilestone}`);
-                return null;
-            }
-
-            // Create new achievement
-            const achievement = new Achievement({
-                playerId,
-                type,
-                milestone: nextMilestone,
-                unlockedAt: new Date()
-            });
-
-            await achievement.save();
-            logger.info(`New achievement created for ${playerId}: ${type} ${nextMilestone}`);
-            
-            return achievement;
+            return latestAchievement;
         } catch (error) {
             logger.error('Error tracking achievement:', error);
             throw error;
