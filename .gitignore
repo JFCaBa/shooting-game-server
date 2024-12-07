@@ -5,6 +5,7 @@
 
 # Enviroment
 .env
+package-lock.json
 
 # Keys
 serviceAccountKey.json
