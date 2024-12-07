@@ -23,7 +23,8 @@ const playerSchema = new mongoose.Schema({
         kills: { type: Number, default: 0 },
         hits: { type: Number, default: 0 },
         deaths: { type: Number, default: 0 },
-        survivalStart: { type: Date, default: Date.now }
+        survivalStart: { type: Date, default: Date.now },
+        accuracy: {type: Number, default: 0}
     },
     lastActive: {
         type: Date,

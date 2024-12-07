@@ -12,15 +12,20 @@ class GameHandler {
         this.playerStats = new Map();
     }
 
-    async handleKill(data, senderId) {
+    async handleKill(data, playerId, senderId) {
         try {
             // Get the sender's stats
             const senderStats = await this.getPlayerStats(senderId);
+            const playerStats = await this.getPlayerStats(playerId);
             if (!senderStats.kills) senderStats.kills = 0;
             
-            // Increment kills
+            // Increment sender kills
             senderStats.kills++;
             this.playerStats.set(senderId, senderStats);
+
+            // Restart player survival time
+            playerStats.survivalStart = Date.now();
+            this.playerStats.set(playerId, playerStats)
 
             // Update sender's kill count in DB
             await Player.findOneAndUpdate(
@@ -29,30 +34,19 @@ class GameHandler {
             );
 
             // Update target's death count
-            if (data.senderId) {
-                await Player.findOneAndUpdate(
-                    { playerId: data.senderId },
-                    { $inc: { 'stats.deaths': 1 } }
-                );
-            }
+            await Player.findOneAndUpdate(
+                { playerId: playerId },
+                { $inc: { 'stats.deaths': 1 } }
+            );
 
             // Track achievement with the updated kill count
             logger.info(`Tracking kill achievement for ${senderId}, kills: ${senderStats.kills}`);
-            const achievement = await AchievementService.trackAchievement(senderId, 'kills', senderStats.kills);
+            await AchievementService.trackAchievement(senderId, 'kills', senderStats.kills);
             
-            if (achievement) {
-                // Notify achievement if unlocked
-                if (this.wsManager.clients?.has(senderId)) {
-                    this.wsManager.clients.get(senderId).send(JSON.stringify({
-                        type: 'achievement',
-                        achievement
-                    }));
-                }
-            }
 
             // Notify target about the kill
-            if (data.senderId && this.wsManager.clients?.has(data.senderId)) {
-                this.wsManager.clients.get(data.senderId).send(JSON.stringify(data));
+            if (senderId && this.wsManager.clients?.has(senderId)) {
+                this.wsManager.clients.get(senderId).send(JSON.stringify(data));
             }
 
         } catch (error) {
@@ -61,32 +55,38 @@ class GameHandler {
         }
     }
 
-    async handleHitConfirmed(data, playerId) {
-        const { senderId, type } = data;
-        let stats = this.getPlayerStats(senderId);
-
+    async handleHitConfirmed(data, senderId) {
         try {
-            stats.hits++;
-            stats.shots = stats.shots || stats.hits; // Ensure shots is never less than hits
+            const senderStats = await this.getPlayerStats(senderId);
+            if (!senderStats.hits) senderStats.hits = 0;
+            if (!senderStats.accuracy) senderStats.accuracy = 0;
 
-            this.updateAccuracy(senderId, stats);
+            senderStats.hits++;
+            senderStats.shots = senderStats.shots || senderStats.hits; // Ensure shots is never less than hits
+            this.playerStats.set(senderId, senderStats)
 
-            logger.info(`Tracking hit achievement for ${senderId}, hits: ${stats.hits}`);
-            await AchievementService.trackAchievement(senderId, 'hits', stats.hits);
+            this.updateAccuracy(senderId, senderStats);
+
+            logger.info(`Tracking hit achievement for ${senderId}, hits: ${senderStats.hits}`);
+            await AchievementService.trackAchievement(senderId, 'hits', senderStats.hits);
             
-            if (stats.accuracy) {
-                logger.info(`Tracking accuracy achievement for ${senderId}, accuracy: ${stats.accuracy}`);
-                await AchievementService.trackAchievement(senderId, 'accuracy', stats.accuracy);
-            }
+            logger.info(`Tracking accuracy achievement for ${senderId}, accuracy: ${senderStats.accuracy}`);
+            await AchievementService.trackAchievement(senderId, 'accuracy', senderStats.accuracy);
 
-            // Update hit count for player
+            // Update hit count for sender
             await Player.findOneAndUpdate(
-                { senderId: playerId },
+                { playerId: senderId },
                 { $inc: { 'stats.hits': 1 } }
             );
 
+            // Update accuracy for sender
+            await Player.findOneAndUpdate(
+                { playerId: senderId },
+                { $set: { 'stats.accuracy': senderStats.accuracy } }
+            );
+
             // Send the message to the player so the app will update the score
-            if (senderId && this.wsManager.clients?.has(playerId)) {
+            if (senderId && this.wsManager.clients?.has(senderId)) {
                 this.wsManager.clients.get(senderId).send(JSON.stringify(data));
             }
 
@@ -101,7 +101,6 @@ class GameHandler {
         stats.shots = (stats.shots || 0) + 1;
         this.updateAccuracy(playerId, stats);
         this.playerStats.set(playerId, stats);
-        this.wsManager.broadcastToAll(data, playerId);
     }
 
     updateAccuracy(playerId, stats) {
@@ -113,17 +112,37 @@ class GameHandler {
     }
 
     async getPlayerStats(playerId) {
-        if (!this.playerStats.has(playerId)) {
-            await this.initPlayerStats(playerId);
+        try {
+            const player = await Player.findOne({ playerId });
+            if (!player) {
+                logger.warn(`Player ${playerId} not found. Initializing default stats.`);
+                return {
+                    shots: 0,
+                    hits: 0,
+                    kills: 0,
+                    deaths: 0,
+                    accuracy: 0,
+                    survivalStart: Date.now(),
+                };
+            }
+            return player.stats || {};
+        } catch (error) {
+            logger.error(`Error fetching stats for player ${playerId}:`, error);
+            return {
+                shots: 0,
+                hits: 0,
+                kills: 0,
+                deaths: 0,
+                accuracy: 0,
+                survivalStart: Date.now(),
+            };
         }
-        return {...this.playerStats.get(playerId)};
     }
 
     handleShotConfirmed(data, playerId) {
         const stats = this.getPlayerStats(playerId);
         stats.shots++;
         this.updateAccuracy(playerId, stats);
-        this.wsManager.broadcastToAll(data, playerId);
       }
   
     handleDisconnect(playerId) {        
@@ -165,9 +184,13 @@ class GameHandler {
             }
 
             const stats = this.playerStats.get(playerId);
+
+            // Initialize survival start if doesn't exist
             if (!stats.survivalStart) {
-                logger.error(`No survival start time for player ${playerId}`);
-                return;
+                stats.survivalStart = Date.now();
+                this.playerStats.set(playerId, stats);
+                logger.info(`Initialized survival start time for player ${playerId}`);
+                return; // Skip this interval to start counting from next
             }
 
             const startTime = new Date(stats.survivalStart).getTime();
@@ -182,7 +205,7 @@ class GameHandler {
                 return;
             }
 
-            logger.info(`Tracking survival time for ${playerId}: ${survivalTime} seconds`);
+            // logger.info(`Tracking survival time for ${playerId}: ${survivalTime} seconds`);
             await AchievementService.trackAchievement(playerId, 'survivalTime', survivalTime);
         }, trackInterval);
     }

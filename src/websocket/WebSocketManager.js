@@ -21,12 +21,14 @@ class WebSocketManager {
     handleConnection(ws, req) {
         logger.info(`New connection from ${req.socket.remoteAddress}`);
         let playerId = null;
+        let senderId = null;
 
         ws.on('message', async (message) => {
             try {
                 const data = JSON.parse(message);
                 playerId = data.playerId;
-                this.handleMessage(data, playerId, ws);
+                senderId = data.senderId;
+                this.handleMessage(data, playerId, senderId, ws);
             } catch (error) {
                 logger.error('Error processing message:', error);
             }
@@ -40,7 +42,7 @@ class WebSocketManager {
         });
     }
 
-    async handleMessage(data, playerId, ws) {
+    async handleMessage(data, playerId, senderId, ws) {
         logger.info('Message received:', {
             type: data.type,
             from: playerId
@@ -56,17 +58,19 @@ class WebSocketManager {
                 break;
             case 'shoot':
                 this.gameHandler.handleShot(data, playerId);
+                this.broadcastToAll(data, playerId);
                 break;
             case 'shootConfirmed':
                 this.gameHandler.handleShotConfirmed(data, playerId);
+                this.sendMessageToPlayer(data, senderId)
                 break;
             case 'hit':
                 break;
             case 'hitConfirmed':
-                this.gameHandler.handleHitConfirmed(data, playerId);
+                this.gameHandler.handleHitConfirmed(data, senderId);
                 break;
             case 'kill':
-                this.gameHandler.handleKill(data, data.senderId);
+                this.gameHandler.handleKill(data, playerId, senderId);
                 break;
         }
     }
@@ -77,6 +81,18 @@ class WebSocketManager {
 
         this.clients.forEach((ws, id) => {
             if (id !== senderId && ws.readyState === WebSocket.OPEN) {
+                ws.send(messageStr);
+                sentCount++;
+            }
+        });
+    }
+
+    sendMessageToPlayer(message, senderId) {
+        const messageStr = JSON.stringify(message);
+        let sentCount = 0;
+
+        this.clients.forEach((ws, id) => {
+            if (id == senderId && ws.readyState === WebSocket.OPEN) {
                 ws.send(messageStr);
                 sentCount++;
             }
