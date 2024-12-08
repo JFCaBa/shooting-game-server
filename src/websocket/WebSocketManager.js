@@ -1,8 +1,23 @@
+const fs = require('fs');
+const https = require('https');
 const WebSocket = require('ws');
 const logger = require('../utils/logger');
 const GameHandler = require('./GameHandler');
 const Player = require('../models/Player');
 const notificationService = require('../services/NotificationService');
+
+// Load SSL certificate
+const serverOptions = {
+    key: fs.readFileSync('certificates/privkey.pem', 'utf8'),
+    cert: fs.readFileSync('certificates/cert.pem', 'utf8'),
+    ca: fs.readFileSync('certificates/chain.pem', 'utf8'), // If needed
+  };
+
+  // Create HTTPS server with SSL
+const server = https.createServer(serverOptions);
+
+// Initialize WebSocket server with the secure server
+const wss = new WebSocket.Server({ server });
 
 class WebSocketManager {
     constructor(server) {

@@ -6,6 +6,7 @@
 # Enviroment
 .env
 package-lock.json
+certificates/
 
 # Keys
 serviceAccountKey.json

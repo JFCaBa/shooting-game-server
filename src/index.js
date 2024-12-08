@@ -1,7 +1,8 @@
 require('dotenv').config();
 const connectDB = require('./config/database');
 const express = require('express');
-const http = require('http');
+const https = require('https'); // Use https instead of http
+const fs = require('fs');
 const cors = require('cors');
 const helmet = require('helmet');
 const WebSocketManager = require('./websocket/WebSocketManager');
@@ -13,7 +14,17 @@ const hallOfFameRoutes = require('./routes/hallOfFameRoutes');
 const logger = require('./utils/logger');
 
 const app = express();
-const server = http.createServer(app);
+
+// Load SSL certificates
+const privateKey = fs.readFileSync('certificates/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('certificates/cert.pem', 'utf8');
+const ca = fs.readFileSync('certificates/chain.pem', 'utf8');
+
+const credentials = { key: privateKey, cert: certificate, ca: ca };
+
+// Create HTTPS server
+const server = https.createServer(credentials, app);
+
 const WS_PORT = process.env.WS_PORT || 8182;
 const API_PORT = process.env.API_PORT || 3000;
 
