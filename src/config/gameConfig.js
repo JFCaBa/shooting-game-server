@@ -1,8 +1,10 @@
 const gameConfig = {
   TOKENS: {
       HIT: 1,
-      KILL: 5
+      KILL: 5,
+      DRONE: 2
   },
+  MAX_DRONES_PER_PLAYER: 3,
   ACHIEVEMENT_MILESTONES: {
       kills: [10, 50, 100, 500, 1000],
       hits: [100, 500, 1000, 5000],
