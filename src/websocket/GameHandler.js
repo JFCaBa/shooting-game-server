@@ -109,6 +109,13 @@ class GameHandler {
     async handleShotDrone(data, playerId) {
         const isHit = await droneService.validateDroneShot(data);
         if (isHit) {
+            await Player.findOneAndUpdate(
+                { playerId },
+                { 
+                    $inc: { 'stats.droneHits': 1 },
+                    $set: { lastUpdate: new Date() }
+                }
+            );
             await this.playerService.updateBalance(playerId, gameConfig.TOKENS.DRONE);
             await this.wsManager.sendMessageToPlayer({
                 type: 'droneShootConfirmed',

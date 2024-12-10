@@ -7,7 +7,7 @@ class HallOfFameService {
             return await Player.find()
                 .sort({ 'stats.kills': -1 })
                 .limit(limit)
-                .select('playerId stats.kills stats.hits');
+                .select('playerId stats.kills stats.hits stats.droneHits');
         } catch (error) {
             logger.error('Error getting top players by kills:', error);
             throw error;
@@ -19,7 +19,7 @@ class HallOfFameService {
             return await Player.find()
                 .sort({ 'stats.hits': -1 })
                 .limit(limit)
-                .select('playerId stats.kills stats.hits');
+                .select('playerId stats.kills stats.hits stats.droneHits');
         } catch (error) {
             logger.error('Error getting top players by hits:', error);
             throw error;
