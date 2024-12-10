@@ -12,9 +12,9 @@ class DroneService {
         let retries = 0;
         while (retries < maxRetries) {
             const position = {
-                x: this.randomFloat(-2, 2),
-                y: this.randomFloat(-2, 2),
-                z: this.randomFloat(-2, 2),
+                x: this.randomFloat(-5, 5),    // Wider horizontal spread
+                y: this.randomFloat(1.5, 3),   // Above player head height but still visible
+                z: this.randomFloat(-8, -3)    // In front of player, varying distances
             };
 
             if (!this.isTooCloseToPlayerDrones(playerId, position)) {
