@@ -16,9 +16,9 @@ const logger = require('./utils/logger');
 const app = express();
 
 // Load SSL certificates
-const privateKey = fs.readFileSync('certificates/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('certificates/cert.pem', 'utf8');
-const ca = fs.readFileSync('certificates/chain.pem', 'utf8');
+const privateKey = fs.readFileSync(process.env.PRIVATE_KEY, 'utf8');
+const certificate = fs.readFileSync(process.env.CERTIFICATE, 'utf8');
+const ca = fs.readFileSync(process.env.CA, 'utf8');
 
 const credentials = { key: privateKey, cert: certificate, ca: ca };
 

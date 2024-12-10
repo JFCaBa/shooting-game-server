@@ -6,14 +6,14 @@ const droneSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
+    playerId: {
+        type: String,
+        required: true
+    },
     position: {
         x: Number,
         y: Number,
         z: Number
-    },
-    isActive: {
-        type: Boolean,
-        default: true
     },
     createdAt: {
         type: Date,
