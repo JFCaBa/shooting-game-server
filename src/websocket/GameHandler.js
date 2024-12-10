@@ -4,12 +4,15 @@ const AchievementService = require('../services/AchievementService');
 const RewardService = require('../services/RewardService');
 const gameConfig = require('../config/gameConfig');
 const Player = require('../models/Player');
+const droneService = require('../services/DroneService');
+
 
 class GameHandler {
     constructor(wsManager) {
         this.wsManager = wsManager;
         this.playerService = new PlayerService();
         this.playerStats = new Map();
+        this.droneService = droneService;
     }
 
     async handleKill(data, playerId, senderId) {
@@ -101,6 +104,32 @@ class GameHandler {
         stats.shots = (stats.shots || 0) + 1;
         this.updateAccuracy(playerId, stats);
         this.playerStats.set(playerId, stats);
+    }
+
+    async handleShotDrone(data, playerId) {
+        const isHit = await droneService.validateDroneShot(data);
+        if (isHit) {
+            await this.playerService.updateBalance(playerId, gameConfig.TOKENS.DRONE);
+            await this.wsManager.sendMessageToPlayer({
+                type: 'droneShootConfirmed',
+                playerId: playerId,
+                data: {
+                    droneId: data.data.drone.droneId,
+                    position: data.data.drone.position,
+                    reward: gameConfig.TOKENS.DRONE
+                }
+            }, playerId);
+        } else {
+            await this.wsManager.sendMessageToPlayer({
+                type: 'droneShootRejected',
+                playerId: playerId,
+                data: {
+                    droneId: data.data.drone.droneId,
+                    position: data.data.drone.position,
+                    reward: 0
+                }
+            }, playerId);
+        }
     }
 
     updateAccuracy(playerId, stats) {

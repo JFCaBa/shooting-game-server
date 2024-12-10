@@ -1,34 +1,43 @@
-
 const Drone = require('../models/Drone');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
+const gameConfig = require('../config/gameConfig');
 
 class DroneService {
     constructor() {
         this.activeDrones = new Map(); // Store active drones in memory for quick access
-        this.playerDrones = new Map();
     }
 
-    generatePosition() {
-        const position = {
-            x: this.randomFloat(-3, 3),
-            y: this.randomFloat(0, 3),
-            z: this.randomFloat(-2, -1)
-        };
+    generatePosition(playerId, maxRetries = 10) {
+        let retries = 0;
+        while (retries < maxRetries) {
+            const position = {
+                x: this.randomFloat(-2, 2),
+                y: this.randomFloat(-2, 2),
+                z: this.randomFloat(-2, 2),
+            };
 
-        if (this.isTooCloseToOtherDrones(position)) {
-            return this.generatePosition();
+            if (!this.isTooCloseToPlayerDrones(playerId, position)) {
+                return position;
+            }
+
+            retries++;
         }
 
-        return position;
+        throw new Error("Failed to generate a valid position after maximum retries");
     }
 
     randomFloat(min, max) {
         return Math.random() * (max - min) + min;
     }
 
-    isTooCloseToOtherDrones(position, minDistance = 0.5) {
-        for (const drone of this.activeDrones.values()) {
+    isTooCloseToPlayerDrones(playerId, position, minDistance = 0.5) {
+        // Filter drones to only include those belonging to the player
+        const playerDrones = Array.from(this.activeDrones.values()).filter(
+            (drone) => drone.playerId === playerId
+        );
+
+        for (const drone of playerDrones) {
             const distance = Math.sqrt(
                 Math.pow(position.x - drone.position.x, 2) +
                 Math.pow(position.y - drone.position.y, 2) +
@@ -39,20 +48,26 @@ class DroneService {
         return false;
     }
 
-    async generateDrone() {
+    async generateDrone(playerId) {
+        const droneCount = this.getDroneCount(playerId);
+
+        // Enforce maximum drones per player
+        if (droneCount >= gameConfig.MAX_DRONES_PER_PLAYER) {
+            return null; // Prevent generating extra drones
+        }
+
         try {
             const droneId = crypto.randomBytes(16).toString('hex');
-            const position = this.generatePosition();
-            
+            const position = this.generatePosition(playerId);
+
             const drone = new Drone({
                 droneId,
+                playerId,
                 position,
-                isActive: true
             });
-            
+
             await drone.save();
             this.activeDrones.set(droneId, drone);
-            
             return drone;
         } catch (error) {
             logger.error('Error generating drone:', error);
@@ -61,50 +76,66 @@ class DroneService {
     }
 
     getDroneCount(playerId) {
-        return (this.playerDrones.get(playerId) || []).length;
+        const playerDrones = Array.from(this.activeDrones.values()).filter(
+            (drone) => drone.playerId === playerId
+        );        
+        return playerDrones.length;
     }
 
-    removePlayerDrones(playerId) {
-        const drones = this.playerDrones.get(playerId) || [];
-        drones.forEach(droneId => {
-            this.activeDrones.delete(droneId);
-            Drone.findOneAndUpdate(
-                { droneId },
-                { isActive: false }
-            ).catch(error => logger.error('Error deactivating drone:', error));
-        });
-        this.playerDrones.delete(playerId);
-    }
-
-    async validateDroneShot(droneId, shotPosition) {
+    async removePlayerDrones(playerId) {
         try {
-            const drone = this.activeDrones.get(droneId);
-            if (!drone?.isActive) return false;
-            drone.isActive = false
-            
-            return true
+            // Find all drones belonging to the player
+            const dronesToRemove = Array.from(this.activeDrones.values()).filter(
+                (drone) => drone.playerId === playerId
+            );
+
+            for (const drone of dronesToRemove) {
+                this.activeDrones.delete(drone.droneId); // Remove from in-memory store
+                await Drone.findOneAndDelete({ droneId: drone.droneId }); // Remove from database
+            }
+
+            logger.info(`Removed all drones for player ${playerId}`);
         } catch (error) {
-            logger.error('Error validating drone shot:', error);
-            return false;
+            logger.error('Error removing player drones:', error);
         }
     }
 
-    async deactivateDrone(droneId) {
+    async validateDroneShot(data) {
+        // Extract from nested structure
+        const playerId = data.playerId;
+        const droneId = data.data?.drone?.droneId;
+    
+        if (!droneId || !playerId) {
+            logger.warn(`Missing droneId or playerId in request`);
+            return false;
+        }
+    
         try {
-            await Drone.findOneAndUpdate(
-                { droneId },
-                { isActive: false }
-            );
-            const drone = this.activeDrones.get(droneId);
-            if (drone) {
-                drone.isActive = false;
+            const drone = Array.from(this.activeDrones.values())
+                .find(drone => drone.droneId === droneId);
+    
+            if (!drone) {
+                logger.warn(`Drone ${droneId} not found or already removed for player ${playerId}.`);
+                return false;
             }
+    
+            // Ensure the drone belongs to the correct player
+            if (drone.playerId !== playerId) {
+                logger.warn(`Player ${playerId} tried to shoot a drone owned by another player (${drone.playerId}).`);
+                return false;
+            }
+    
+            // Remove from memory and database
+            this.activeDrones.delete(droneId);
+            await Drone.findOneAndDelete({ droneId });
+            
+            logger.info(`Drone ${droneId} successfully shot and removed by player ${playerId}.`);
+            return true;
         } catch (error) {
-            logger.error('Error deactivating drone:', error);
-            throw error;
+            logger.error(`Error validating drone shot for player ${playerId}:`, error);
+            return false;
         }
     }
 }
 
 module.exports = new DroneService();
-    

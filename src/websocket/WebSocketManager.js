@@ -1,3 +1,4 @@
+require('dotenv').config();
 const fs = require('fs');
 const https = require('https');
 const WebSocket = require('ws');
@@ -7,13 +8,12 @@ const Player = require('../models/Player');
 const notificationService = require('../services/NotificationService');
 const droneService = require('../services/DroneService');
 const gameConfig = require('../config/gameConfig');
-const DroneService = require('../services/DroneService');
 
 // Load SSL certificate
 const serverOptions = {
-    key: fs.readFileSync('certificates/privkey.pem', 'utf8'),
-    cert: fs.readFileSync('certificates/cert.pem', 'utf8'),
-    ca: fs.readFileSync('certificates/chain.pem', 'utf8'), 
+    key: fs.readFileSync(process.env.PRIVATE_KEY, 'utf8'),
+    cert: fs.readFileSync(process.env.CERTIFICATE, 'utf8'),
+    ca: fs.readFileSync(process.env.CA, 'utf8'), 
   };
 
   // Create HTTPS server with SSL
@@ -35,29 +35,33 @@ class WebSocketManager {
         if (this.droneGenerationInterval) {
             clearInterval(this.droneGenerationInterval);
         }
+    
         this.droneGenerationInterval = setInterval(async () => {
             try {
                 for (const [playerId, ws] of this.clients.entries()) {
-                    if (this.droneService.getDroneCount(playerId) < gameConfig.MAX_DRONES_PER_PLAYER) {
-                        const drone = await this.droneService.generateDrone(playerId);
-                        if (drone) {
-                            const message = {
-                                type: 'newDrone',
-                                playerId: playerId,
-                                data: { 
-                                    droneId: drone.droneId,
-                                    position: {
-                                        x: drone.position.x,
-                                        y: drone.position.y,
-                                        z: drone.position.z
-                                    },
-                                    reward: gameConfig.TOKENS.DRONE,                                    
-                                }
-                            };
-                            logger.info('Sending message to player:', message);
-                            await this.sendMessageToPlayer(message, playerId);
-                            logger.info(`Issued drone to player ${playerId}`);
-                        }
+                    // Lock drone count during generation to avoid overlaps
+                    const currentDroneCount = this.droneService.getDroneCount(playerId);
+                    if (currentDroneCount >= gameConfig.MAX_DRONES_PER_PLAYER) {
+                        continue; // Skip if max drones already reached
+                    }
+    
+                    const drone = await this.droneService.generateDrone(playerId);
+                    if (drone) {
+                        const message = {
+                            type: 'newDrone',
+                            playerId: playerId,
+                            data: {
+                                droneId: drone.droneId,
+                                position: {
+                                    x: drone.position.x,
+                                    y: drone.position.y,
+                                    z: drone.position.z,
+                                },
+                                reward: gameConfig.TOKENS.DRONE,
+                            },
+                        };
+    
+                        await this.sendMessageToPlayer(message, playerId);
                     }
                 }
             } catch (error) {
@@ -98,6 +102,7 @@ class WebSocketManager {
         ws.on('close', () => {
             if (playerId) {
                 this.clients.delete(playerId);
+                this.droneService.removePlayerDrones(playerId);
                 logger.info(`Player ${playerId} disconnected`);
             }
         });
@@ -125,7 +130,7 @@ class WebSocketManager {
 
             case 'shootConfirmed':
                 this.gameHandler.handleShotConfirmed(data, playerId);
-                this.sendMessageToPlayer(data, senderId)
+                await this.sendMessageToPlayer(data, senderId)
                 break;
 
             case 'hit':
@@ -140,28 +145,7 @@ class WebSocketManager {
                 break;
 
             case 'shootDrone':
-                const isHit = await droneService.validateDroneShot(data.droneId, data.position);
-                if (isHit) {
-                    await droneService.deactivateDrone(data.droneId);
-                    await playerService.updateBalance(playerId, 2);
-                    this.sendMessageToPlayer({
-                        type: 'droneShootConfirmed',
-                        playerId: playerId,
-                        data: {
-                            droneId: data.droneId,
-                            reward: gameConfig.TOKENS.DRONE
-                        }
-                        
-                    }, playerId);
-                } else {
-                    this.sendMessageToPlayer({
-                        type: 'droneShootRejected',
-                        playerId: playerId,
-                        data: {
-                            droneId: data.droneId
-                        }
-                    }, playerId);
-                }
+                this.gameHandler.handleShotDrone(data, playerId);
                 break;
         }
     }
@@ -174,13 +158,30 @@ class WebSocketManager {
         }
     }
 
-    broadcastToAll(message, senderId) {
+    async broadcastToAll(message, senderId) {
         const messageStr = JSON.stringify(message);
         this.clients.forEach((ws, playerId) => {
             if (playerId !== senderId && ws.readyState === WebSocket.OPEN) {
                 ws.send(messageStr);
             }
         });
+    }
+
+    async updatePlayerPushToken(playerId, pushToken) {
+        try {
+            await Player.findOneAndUpdate(
+                { playerId },
+                {
+                    $set: {
+                        pushToken,
+                        pushTokenUpdatedAt: new Date()
+                    }
+                },
+                { upsert: true }
+            );
+        } catch (error) {
+            logger.error('Error updating push token:', error);
+        }
     }
 }
 
