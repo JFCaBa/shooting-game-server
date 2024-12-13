@@ -60,6 +60,8 @@ class WebSocketManager {
                                 reward: gameConfig.TOKENS.DRONE,
                             },
                         };
+
+                        logger.info(`Issued drone ${drone.id}`);
     
                         await this.sendMessageToPlayer(message, playerId);
                     }
@@ -92,8 +94,10 @@ class WebSocketManager {
             try {
                 const data = JSON.parse(message);
                 playerId = data.playerId;
-                this.clients.set(playerId, ws);
-                await this.handleMessage(data, playerId, ws);
+                const senderId = data.senderId || null; // Use senderId if available; otherwise, set to null
+                
+                this.clients.set(playerId, ws); // Map the playerId to the websocket
+                await this.handleMessage(data, playerId, senderId, ws); // Pass senderId to handleMessage
             } catch (error) {
                 logger.error(`Error processing message from ${ip}: ${error.message}`);
             }
@@ -111,7 +115,8 @@ class WebSocketManager {
     async handleMessage(data, playerId, senderId, ws) {
         logger.info('Message received:', {
             type: data.type,
-            from: playerId
+            from: playerId,
+            to: senderId
         });
 
         switch (data.type) {
@@ -130,7 +135,7 @@ class WebSocketManager {
 
             case 'shootConfirmed':
                 this.gameHandler.handleShotConfirmed(data, playerId);
-                await this.sendMessageToPlayer(data, senderId)
+                this.sendMessageToPlayer(data, senderId)
                 break;
 
             case 'hit':
@@ -147,9 +152,12 @@ class WebSocketManager {
             case 'shootDrone':
                 this.gameHandler.handleShotDrone(data, playerId);
                 break;
+            
+            case 'removeDrones':
+                await this.droneService.removePlayerDrones(playerId);
+                break;
         }
     }
-
 
     async sendMessageToPlayer(message, playerId) {
         const ws = this.clients.get(playerId);
