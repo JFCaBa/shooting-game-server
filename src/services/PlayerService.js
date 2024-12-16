@@ -64,6 +64,32 @@ class PlayerService {
     }
   }
 
+  async updateMintedBalance(playerId, amount) {
+    try {
+      // Add tokens to the pending balance
+      const balance = await Player.findOneAndUpdate(
+        { playerId },
+        {
+          $inc: { mintedBalance: amount },
+          $set: { lastUpdate: new Date() }
+        },
+        { upsert: true, new: true }
+      );
+  
+      // Optionally, transfer from pending to minted after some action/confirmation
+      // if (balance.pendingBalance >= 0) {
+      //   balance.mintedBalance += balance.pendingBalance;
+      //   balance.pendingBalance = 0;  // Reset pending balance
+      //   await balance.save();  // Save the balance after moving tokens to minted
+      // }
+  
+      return balance;
+    } catch (error) {
+      logger.error('Error updating token balance:', error);
+      throw error;
+    }
+  }
+
   async adReward(playerId) {
     try {
         const reward = await Player.findOneAndUpdate(

@@ -131,9 +131,9 @@ class GameHandler {
             await RewardHistory.create({
                 playerId: playerId,
                 rewardType: 'DRONE',
-                amount: gameConfig.TOKENS.KILL, 
+                amount: gameConfig.TOKENS.DRONE, 
             })
-            await this.playerService.updateBalance(playerId, gameConfig.TOKENS.DRONE);
+            await this.playerService.updateMintedBalance(playerId, gameConfig.TOKENS.DRONE);
             await this.wsManager.sendMessageToPlayer({
                 type: 'droneShootConfirmed',
                 playerId: playerId,
