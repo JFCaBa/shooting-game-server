@@ -5,7 +5,7 @@ class HallOfFameService {
     async getTopPlayersByKills(limit = 10) {
         try {
             return await Player.find()
-                .sort({ 'stats.kills': -1 })
+                .sort({ 'stats.kills': -1, 'stats.hits': -1, 'stats.droneHits': -1 })
                 .limit(limit)
                 .select('playerId stats.kills stats.hits stats.droneHits');
         } catch (error) {

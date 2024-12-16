@@ -10,6 +10,11 @@ const WebSocketManager = require('./websocket/WebSocketManager');
 const playerRoutes = require('./routes/playerRoutes');
 const achievementRoutes = require('./routes/achievementRoutes');
 const hallOfFameRoutes = require('./routes/hallOfFameRoutes');
+const droneConfigRoutes = require('./routes/droneConfigRoutes');
+
+const authRoutes = require('./routes/authRoutes');
+const authMiddleware = require('./middleware/authMiddleware');
+
 
 const logger = require('./utils/logger');
 
@@ -36,10 +41,14 @@ app.use(express.json());
 // WebSocket Setup
 const wsManager = new WebSocketManager(server);
 
-// Routes
+// Public Routes
+app.use('/apiv1//auth', authRoutes);
 app.use('/api/v1', playerRoutes);
 app.use('/api/v1', achievementRoutes);
 app.use('/api/v1', hallOfFameRoutes);
+
+// Protected Routes - all these routes will require authentication
+app.use('/api/drone-config', authMiddleware, droneConfigRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {

@@ -1,6 +1,7 @@
 const Drone = require('../models/Drone');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
+const DroneConfig = require('../models/DroneConfig')
 const gameConfig = require('../config/gameConfig');
 
 class DroneService {
@@ -8,13 +9,16 @@ class DroneService {
         this.activeDrones = new Map(); // Store active drones in memory for quick access
     }
 
-    generatePosition(playerId, maxRetries = 10) {
+    async generatePosition(playerId, maxRetries = 10) {
         let retries = 0;
+
+        const config = await DroneConfigService.getConfig();
+
         while (retries < maxRetries) {
             const position = {
-                x: this.randomFloat(-5, 5),    // Wider horizontal spread
-                y: this.randomFloat(1.5, 3),   // Above player head height but still visible
-                z: this.randomFloat(-8, -3)    // In front of player, varying distances
+                x: this.randomFloat(config.xMin, config.xMax), 
+                y: this.randomFloat(config.yMin, config.yMax),   
+                z: this.randomFloat(config.zMin, config.zMax)  
             };
 
             if (!this.isTooCloseToPlayerDrones(playerId, position)) {
@@ -58,7 +62,7 @@ class DroneService {
 
         try {
             const droneId = crypto.randomBytes(16).toString('hex');
-            const position = this.generatePosition(playerId);
+            const position = await this.generatePosition(playerId);
 
             const drone = new Drone({
                 droneId,
