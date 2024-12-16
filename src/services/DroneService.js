@@ -1,8 +1,9 @@
 const Drone = require('../models/Drone');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
-const DroneConfig = require('../models/DroneConfig')
 const gameConfig = require('../config/gameConfig');
+const DroneConfigService = require('./DroneConfigService');
+
 
 class DroneService {
     constructor() {
