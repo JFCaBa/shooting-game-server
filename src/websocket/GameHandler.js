@@ -1,11 +1,10 @@
 const logger = require('../utils/logger');
 const PlayerService = require('../services/PlayerService');
 const AchievementService = require('../services/AchievementService');
-const RewardService = require('../services/RewardService');
-const gameConfig = require('../config/gameConfig');
+const RewardHistory = require('../models/RewardHistory');
 const Player = require('../models/Player');
 const droneService = require('../services/DroneService');
-
+const gameConfig = require('../config/gameConfig');
 
 class GameHandler {
     constructor(wsManager) {
@@ -41,6 +40,12 @@ class GameHandler {
                 { playerId: playerId },
                 { $inc: { 'stats.deaths': 1 } }
             );
+
+            await RewardHistory.create({
+                playerId: senderId,
+                rewardType: 'KILL',
+                amount: gameConfig.TOKENS.KILL
+            });
 
             // Track achievement with the updated kill count
             logger.info(`Tracking kill achievement for ${senderId}, kills: ${senderStats.kills}`);
@@ -88,6 +93,12 @@ class GameHandler {
                 { $set: { 'stats.accuracy': senderStats.accuracy } }
             );
 
+            await RewardHistory.create({
+                playerId: senderId,
+                rewardType: 'HIT',
+                amount: gameConfig.TOKENS.HIT
+            });
+
             // Send the message to the player so the app will update the score
             if (senderId && this.wsManager.clients?.has(senderId)) {
                 this.wsManager.clients.get(senderId).send(JSON.stringify(data));
@@ -116,6 +127,12 @@ class GameHandler {
                     $set: { lastUpdate: new Date() }
                 }
             );
+
+            await RewardHistory.create({
+                playerId: playerId,
+                rewardType: 'DRONE',
+                amount: gameConfig.TOKENS.KILL, 
+            })
             await this.playerService.updateBalance(playerId, gameConfig.TOKENS.DRONE);
             await this.wsManager.sendMessageToPlayer({
                 type: 'droneShootConfirmed',

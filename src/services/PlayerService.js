@@ -1,3 +1,4 @@
+const gameConfig = require('../config/gameConfig');
 const Player = require('../models/Player');
 const logger = require('../utils/logger');
 
@@ -68,7 +69,7 @@ class PlayerService {
         const reward = await Player.findOneAndUpdate(
             { playerId },
             {
-                $inc: { pendingBalance: 10 }, // 10 Tokens will be added
+                $inc: { pendingBalance: gameConfig.TOKENS.AD }, 
                 $set: { lastUpdate: new Date() }
             },
             { upsert: true, new: true } // Options: upsert and return the updated document

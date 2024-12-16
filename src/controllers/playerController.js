@@ -1,6 +1,9 @@
 const PlayerService = require('../services/PlayerService');
+const RewardHistory = require('../models/RewardHistory');
 const logger = require('../utils/logger');
 const Player = require('../models/Player');
+const gameConfig = require('../config/gameConfig');
+
 
 const playerService = new PlayerService();  // Instantiate the class
 
@@ -33,6 +36,13 @@ exports.adReward = async (req, res) => {
   try {
     const { walletAddress } = req.body;
     await playerService.adReward(walletAddress);
+
+    await RewardHistory.create({
+      playerId: walletAddress,
+      rewardType: 'AD_WATCH',
+      amount: gameConfig.TOKENS.AD
+  });
+
     res.json({ message: 'Reward tokens added successfully', amount: 10 });
   } catch (error) {
     res.status(500).json({ error: error.message });

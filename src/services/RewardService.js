@@ -28,6 +28,12 @@ class RewardService {
                 75: 25,   // 25 tokens for 75% accuracy
                 90: 50,   // 50 tokens for 90% accuracy
                 95: 100   // 100 tokens for 95% accuracy
+            },
+            drone: {
+                100: 10,
+                500: 50,
+                1000: 100,
+                5000: 500
             }
         };
     }
