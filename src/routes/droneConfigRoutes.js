@@ -1,16 +1,12 @@
 const express = require('express');
-const droneConfigController = require('../controllers/droneConfigController');
-const { authenticate } = require('../middleware/auth'); // If you have auth middleware
-
 const router = express.Router();
+const droneConfigController = require('../controllers/droneConfigController');
+const serviceAuthMiddleware = require('../middleware/serviceAuthMiddleware');
 
-// Get current drone spawn configuration
-router.get('/drone-config', authenticate, droneConfigController.getConfig);
+// Public route for getting config
+router.get('/drone-config', droneConfigController.getConfig);
 
-// Update drone spawn configuration
-router.put('/drone-config', authenticate, droneConfigController.updateConfig);
-
-// Reset to default configuration
-router.post('/drone-config/reset', authenticate, droneConfigController.resetConfig);
+// Protected route for updating config
+router.put('/drone-config', serviceAuthMiddleware, droneConfigController.updateConfig);
 
 module.exports = router;
