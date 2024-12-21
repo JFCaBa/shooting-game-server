@@ -3,7 +3,6 @@ const PlayerService = require('../services/PlayerService');
 const AchievementService = require('../services/AchievementService');
 const RewardHistory = require('../models/RewardHistory');
 const Player = require('../models/Player');
-const droneService = require('../services/DroneService');
 const gameConfig = require('../config/gameConfig');
 
 class GameHandler {
@@ -117,45 +116,6 @@ class GameHandler {
         this.playerStats.set(playerId, stats);
     }
 
-    async handleShotDrone(data, playerId) {
-        const isHit = await droneService.validateDroneShot(data);
-        if (isHit) {
-            await Player.findOneAndUpdate(
-                { playerId },
-                { 
-                    $inc: { 'stats.droneHits': 1 },
-                    $set: { lastUpdate: new Date() }
-                }
-            );
-
-            await RewardHistory.create({
-                playerId: playerId,
-                rewardType: 'DRONE',
-                amount: gameConfig.TOKENS.DRONE, 
-            })
-            await this.playerService.updateMintedBalance(playerId, gameConfig.TOKENS.DRONE);
-            await this.wsManager.sendMessageToPlayer({
-                type: 'droneShootConfirmed',
-                playerId: playerId,
-                data: {
-                    droneId: data.data.drone.droneId,
-                    position: data.data.drone.position,
-                    reward: gameConfig.TOKENS.DRONE
-                }
-            }, playerId);
-        } else {
-            await this.wsManager.sendMessageToPlayer({
-                type: 'droneShootRejected',
-                playerId: playerId,
-                data: {
-                    droneId: data.data.drone.droneId,
-                    position: data.data.drone.position,
-                    reward: 0
-                }
-            }, playerId);
-        }
-    }
-
     updateAccuracy(playerId, stats) {
         if (stats.shots > 0) {
             stats.accuracy = Math.min(100, Math.round((stats.hits / stats.shots) * 100));
@@ -196,7 +156,7 @@ class GameHandler {
         const stats = this.getPlayerStats(playerId);
         stats.shots++;
         this.updateAccuracy(playerId, stats);
-      }
+    }
   
     handleDisconnect(playerId) {        
         const now = new Date().toISOString();

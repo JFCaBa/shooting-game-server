@@ -6,8 +6,9 @@ const logger = require('../utils/logger');
 const GameHandler = require('./GameHandler');
 const Player = require('../models/Player');
 const notificationService = require('../services/NotificationService');
-const droneService = require('../services/DroneService');
-const gameConfig = require('../config/gameConfig');
+const GeoObjectHandler = require('../handlers/GeoObjectHandler');
+const DroneHandler = require('../handlers/DroneHandler');
+
 
 // Load SSL certificate
 const serverOptions = {
@@ -24,59 +25,12 @@ class WebSocketManager {
         this.wss = new WebSocket.Server({ server });
         this.clients = new Map(); // Map of playerId -> WebSocket
         this.gameHandler = new GameHandler(this);
+        this.geoObjectHandler = new GeoObjectHandler(this);
+        this.droneHandler = new DroneHandler(this);
         this.notificationService = notificationService;
-        this.droneService = droneService;
-        this.droneGenerationInterval = null;
         this.setupWebSocket();
-        this.startDroneGeneration();
-    }
-
-    startDroneGeneration() {
-        if (this.droneGenerationInterval) {
-            clearInterval(this.droneGenerationInterval);
-        }
-    
-        this.droneGenerationInterval = setInterval(async () => {
-            try {
-                for (const [playerId, ws] of this.clients.entries()) {
-                    // Lock drone count during generation to avoid overlaps
-                    const currentDroneCount = this.droneService.getDroneCount(playerId);
-                    if (currentDroneCount >= gameConfig.MAX_DRONES_PER_PLAYER) {
-                        continue; // Skip if max drones already reached
-                    }
-    
-                    const drone = await this.droneService.generateDrone(playerId);
-                    if (drone) {
-                        const message = {
-                            type: 'newDrone',
-                            playerId: playerId,
-                            data: {
-                                droneId: drone.droneId,
-                                position: {
-                                    x: drone.position.x,
-                                    y: drone.position.y,
-                                    z: drone.position.z,
-                                },
-                                reward: gameConfig.TOKENS.DRONE,
-                            },
-                        };
-
-                        logger.info(`Issued drone ${drone.id}`);
-    
-                        await this.sendMessageToPlayer(message, playerId);
-                    }
-                }
-            } catch (error) {
-                logger.error(`Drone generation error: ${error.message}`);
-            }
-        }, 10000);
-    }
-
-    stopDroneGeneration() {
-        if (this.droneGenerationInterval) {
-            clearInterval(this.droneGenerationInterval);
-            this.droneGenerationInterval = null;
-        }
+        this.droneHandler.startDroneGeneration();
+        this.geoObjectHandler.startGeoObjectGeneration();
     }
 
     setupWebSocket() {
@@ -150,11 +104,23 @@ class WebSocketManager {
                 break;
 
             case 'shootDrone':
-                this.gameHandler.handleShotDrone(data, playerId);
+                await this.droneHandler.handleShotDrone(data, playerId);
                 break;
             
             case 'removeDrones':
-                await this.droneService.removePlayerDrones(playerId);
+                await this.droneHandler.removePlayerDrones(playerId);
+                break;
+
+            case 'geoObjectHit':
+                await this.geoObjectHandler.handleGeoObjectHit(data, playerId);
+                break;
+            
+            case 'geoObjectShootConfirmed':
+                await this.sendMessageToPlayer(data, playerId);
+                break;
+
+            case 'geoObjectShootRejected':
+                await this.sendMessageToPlayer(data, playerId);
                 break;
         }
     }
