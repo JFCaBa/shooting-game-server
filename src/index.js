@@ -14,7 +14,7 @@ const hallOfFameRoutes = require('./routes/hallOfFameRoutes');
 const authRoutes = require('./routes/authRoutes');
 const authMiddleware = require('./middleware/authMiddleware');
 const droneConfigRoutes = require('./routes/droneConfigRoutes');
-const cleanupJob = require('./jobs/cleanupJob');
+const cleanupJob = require('./jobs/cleanUpJobs');
 
 
 const logger = require('./utils/logger');

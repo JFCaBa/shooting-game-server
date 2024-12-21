@@ -52,7 +52,7 @@ class FirebaseService {
     
                     await admin.messaging().send(message);
                     successCount++;
-                    logger.info(`Successfully sent notification to token ${token}`);
+                    // logger.info(`Successfully sent notification to token ${token}`);
                 } catch (error) {
                     logger.error(`Error sending notification to token ${token}:`, error);
                 }

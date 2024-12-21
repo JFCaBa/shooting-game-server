@@ -2,6 +2,7 @@ const logger = require('../utils/logger');
 const PlayerService = require('../services/PlayerService');
 const droneService = require('../services/DroneService');
 const RewardHistory = require('../models/RewardHistory');
+const Player = require('../models/Player');  // Add this import
 const gameConfig = require('../config/gameConfig');
 
 class DroneHandler {
@@ -12,41 +13,51 @@ class DroneHandler {
     }
 
     async handleShotDrone(data, playerId) {
-        const isHit = await droneService.validateDroneShot(data);
-        if (isHit) {
-            await Player.findOneAndUpdate(
-                { playerId },
-                { 
-                    $inc: { 'stats.droneHits': 1 },
-                    $set: { lastUpdate: new Date() }
-                }
-            );
+        try {
+            const isValid = await droneService.validateDroneShot(data);
+            if (isValid) {
+                // Add reward tokens to player
+                await this.playerService.updateBalance(playerId, gameConfig.TOKENS.DRONE);
+                
+                // Record reward history
+                await new RewardHistory({
+                    playerId,
+                    rewardType: 'DRONE',
+                    amount: gameConfig.TOKENS.DRONE
+                }).save();
 
-            await RewardHistory.create({
-                playerId: playerId,
-                rewardType: 'DRONE',
-                amount: gameConfig.TOKENS.DRONE, 
-            })
-            await this.playerService.updateMintedBalance(playerId, gameConfig.TOKENS.DRONE);
-            await this.wsManager.sendMessageToPlayer({
-                type: 'droneShootConfirmed',
-                playerId: playerId,
-                data: {
-                    droneId: data.data.drone.droneId,
-                    position: data.data.drone.position,
-                    reward: gameConfig.TOKENS.DRONE
-                }
-            }, playerId);
-        } else {
-            await this.wsManager.sendMessageToPlayer({
-                type: 'droneShootRejected',
-                playerId: playerId,
-                data: {
-                    droneId: data.data.drone.droneId,
-                    position: data.data.drone.position,
-                    reward: 0
-                }
-            }, playerId);
+                // Update player stats for drones
+                await Player.findOneAndUpdate(
+                    { playerId },
+                    { $inc: { 'stats.dronesShot': 1 } }
+                );
+
+                // Send confirmation to player
+                await this.wsManager.sendMessageToPlayer({
+                    type: 'droneShootConfirmed',
+                    playerId: playerId,
+                    data: {
+                        droneId: data.data.drone.droneId,
+                        position: data.data.drone.position,
+                        reward: gameConfig.TOKENS.DRONE
+                    }
+                }, playerId);
+
+                logger.info(`Player ${playerId} shot drone and received ${gameConfig.TOKENS.DRONE} tokens`);
+            } else {
+                await this.wsManager.sendMessageToPlayer({
+                    type: 'droneShootRejected',
+                    playerId: playerId,
+                    data: {
+                        droneId: data.data.drone.droneId,
+                        position: data.data.drone.position,
+                        reward: 0
+                    }
+                }, playerId);
+            }
+        } catch (error) {
+            logger.error('Error handling drone shot:', error);
+            throw error;
         }
     }
 
