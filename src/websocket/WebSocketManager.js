@@ -3,9 +3,9 @@ const fs = require('fs');
 const https = require('https');
 const WebSocket = require('ws');
 const logger = require('../utils/logger');
-const GameHandler = require('./GameHandler');
 const Player = require('../models/Player');
 const notificationService = require('../services/NotificationService');
+const GameHandler = require('../handlers/GameHandler');
 const GeoObjectHandler = require('../handlers/GeoObjectHandler');
 const DroneHandler = require('../handlers/DroneHandler');
 
