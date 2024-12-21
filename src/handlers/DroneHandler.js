@@ -37,8 +37,9 @@ class DroneHandler {
                     type: 'droneShootConfirmed',
                     playerId: playerId,
                     data: {
-                        droneId: data.data.drone.droneId,
-                        position: data.data.drone.position,
+                        kind: "drone",
+                        droneId: data.data.droneId,
+                        position: data.data.position,
                         reward: gameConfig.TOKENS.DRONE
                     }
                 }, playerId);
@@ -49,8 +50,9 @@ class DroneHandler {
                     type: 'droneShootRejected',
                     playerId: playerId,
                     data: {
-                        droneId: data.data.drone.droneId,
-                        position: data.data.drone.position,
+                        kind: "drone",
+                        droneId: data.data.droneId,
+                        position: data.data.position,
                         reward: 0
                     }
                 }, playerId);
@@ -80,6 +82,7 @@ class DroneHandler {
                             type: 'newDrone',
                             playerId: playerId,
                             data: {
+                                kind: "drone",
                                 droneId: drone.droneId,
                                 position: drone.position,
                                 reward: gameConfig.TOKENS.DRONE,

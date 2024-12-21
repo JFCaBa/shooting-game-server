@@ -6,6 +6,11 @@ const playerSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
+    kind: {
+        type: String,
+        require: false,
+        default: "player"
+    },
     walletAddress: {
         type: String,
         required: false,
