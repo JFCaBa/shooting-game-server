@@ -9,21 +9,13 @@ class GeoObjectService {
     }
 
     getRandomLocation(baseLocation, minDistance, maxDistance) {
-        // Convert distances from meters to degrees (rough approximation)
-        const metersPerDegree = 111000; // roughly 111km per degree
-        const minDeg = minDistance / metersPerDegree;
-        const maxDeg = maxDistance / metersPerDegree;
-
-        // Generate random radius between min and max
-        const radius = Math.random() * (maxDeg - minDeg) + minDeg;
-        
-        // Generate random angle
-        const angle = Math.random() * 2 * Math.PI;
-
+        // Generate a random offset between minDistance and maxDistance
+        const getRandomOffset = () => minDistance + Math.random() * (maxDistance - minDistance);
+    
         // Calculate offset
-        const lat = baseLocation.latitude + (radius * Math.cos(angle));
-        const lon = baseLocation.longitude + (radius * Math.sin(angle) / Math.cos(baseLocation.latitude * Math.PI / 180));
-
+        const lat = baseLocation.latitude + getRandomOffset();
+        const lon = baseLocation.longitude + getRandomOffset();
+    
         return {
             latitude: lat,
             longitude: lon,
@@ -44,6 +36,8 @@ class GeoObjectService {
             const type = gameConfig.GEO_OBJECT.TYPES[
                 Math.floor(Math.random() * gameConfig.GEO_OBJECT.TYPES.length)
             ];
+
+            // const type = gameConfig.GEO_OBJECT.TYPES[2];
 
             const coordinate = this.getRandomLocation(
                 playerLocation,
