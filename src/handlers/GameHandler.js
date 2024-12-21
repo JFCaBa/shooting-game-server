@@ -290,6 +290,7 @@ class GameHandler {
                             const playerData = this.getPlayerStats(id);
                             currentPlayers.push({
                                 type: 'announced',
+                                kind: 'player',
                                 playerId: id,
                                 data: { player: playerData },
                                 timestamp: new Date().toISOString()
