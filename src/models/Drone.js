@@ -6,6 +6,11 @@ const droneSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
+    kind: {
+        type: String,
+        require: false,
+        default: "drone"
+    },
     playerId: {
         type: String,
         required: true

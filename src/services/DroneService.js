@@ -108,7 +108,7 @@ class DroneService {
     async validateDroneShot(data) {
         // Extract from nested structure
         const playerId = data.playerId;
-        const droneId = data.data?.drone?.droneId;
+        const droneId = data.data?.droneId;
     
         if (!droneId || !playerId) {
             logger.warn(`Missing droneId or playerId in request`);

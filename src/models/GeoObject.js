@@ -32,6 +32,11 @@ const geoObjectSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
+    kind: {
+        type: String,
+        require: false,
+        default: "geoObject"
+    },
     type: {
         type: String,
         required: true,

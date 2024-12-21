@@ -63,32 +63,31 @@ class GeoObjectHandler {
 
     async startGeoObjectGeneration(player) {
         try {
-            if (!player || !player.location) {
-                logger.warn(`No location data for player ${player.id}`);
+            if (!player || !player.data.location) {
+                logger.warn(`No location data for player ${player.playerId}`);
                 return;
             }
     
-            const geoObject = await geoObjectService.generateGeoObject(player.id, player.location);
+            const geoObject = await geoObjectService.generateGeoObject(player.playerId, player.data.location);
             if (geoObject) {
                 const message = {
                     type: 'newGeoObject',
+                    playerId: player.playerId,
                     data: geoObject
                 };
-    
-                logger.info(`Attempting to send message to player ${player.id}: ${JSON.stringify(message)}`);
-    
-                const ws = this.wsManager.clients.get(player.id);
+        
+                const ws = this.wsManager.clients.get(player.playerId);
                 if (!ws) {
-                    logger.error(`WebSocket not found for player ${player.id}`);
+                    logger.error(`WebSocket not found for player ${player.playerId}`);
                     return;
                 }
                 if (ws.readyState !== WebSocket.OPEN) {
-                    logger.error(`WebSocket for player ${player.id} is not open. ReadyState: ${ws.readyState}`);
+                    logger.error(`WebSocket for player ${player.playerId} is not open. ReadyState: ${ws.readyState}`);
                     return;
                 }
     
-                await this.wsManager.sendMessageToPlayer(message, player.id);
-                logger.info(`GeoObject ${geoObject.id} sent to player ${player.id}`);
+                await this.wsManager.sendMessageToPlayer(message, player.playerId);
+                logger.info(`GeoObject ${geoObject.id} sent to player ${player.playerId}`);
             }
         } catch (error) {
             logger.error('Error in geo object generation:', error);
