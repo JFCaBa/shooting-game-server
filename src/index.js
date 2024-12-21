@@ -14,7 +14,7 @@ const hallOfFameRoutes = require('./routes/hallOfFameRoutes');
 const authRoutes = require('./routes/authRoutes');
 const authMiddleware = require('./middleware/authMiddleware');
 const droneConfigRoutes = require('./routes/droneConfigRoutes');
-
+const cleanupJob = require('./jobs/cleanupJob');
 
 
 const logger = require('./utils/logger');
@@ -58,6 +58,10 @@ app.get('/health', (req, res) => {
 });
 
 const startServer = async () => {
+  // Start the cleanup job
+  cleanupJob.start();
+
+  //  Start API and Websocket
   try {
     await connectDB();
     
@@ -76,6 +80,7 @@ const startServer = async () => {
 
 // Graceful Shutdown
 process.on('SIGTERM', () => {
+  cleanupJob.stop();
   server.close(() => process.exit(0));
 });
 
