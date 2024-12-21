@@ -10,7 +10,6 @@ class GameHandler {
         this.wsManager = wsManager;
         this.playerService = new PlayerService();
         this.playerStats = new Map();
-        this.droneService = droneService;
     }
 
     async handleKill(data, playerId, senderId) {

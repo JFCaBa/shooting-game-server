@@ -30,7 +30,6 @@ class WebSocketManager {
         this.notificationService = notificationService;
         this.setupWebSocket();
         this.droneHandler.startDroneGeneration();
-        this.geoObjectHandler.startGeoObjectGeneration();
     }
 
     setupWebSocket() {
@@ -50,7 +49,7 @@ class WebSocketManager {
                 playerId = data.playerId;
                 const senderId = data.senderId || null; // Use senderId if available; otherwise, set to null
                 
-                this.clients.set(playerId, ws); // Map the playerId to the websocket
+                // this.clients.set(playerId, ws); // Map the playerId to the websocket
                 await this.handleMessage(data, playerId, senderId, ws); // Pass senderId to handleMessage
             } catch (error) {
                 logger.error(`Error processing message from ${ip}: ${error.message}`);
@@ -60,7 +59,7 @@ class WebSocketManager {
         ws.on('close', () => {
             if (playerId) {
                 this.clients.delete(playerId);
-                this.droneService.removePlayerDrones(playerId);
+                this.geoObjectHandler.removeAllGeoObjects(playerId);
                 logger.info(`Player ${playerId} disconnected`);
             }
         });
@@ -79,7 +78,8 @@ class WebSocketManager {
                     await this.updatePlayerPushToken(playerId, data.pushToken);
                 }
                 this.gameHandler.handleJoin(data, playerId, ws);
-                await this.notificationService.notifyPlayersAboutNewJoin(data.data.player);
+                await this.geoObjectHandler.startGeoObjectGeneration(data.data.player);
+                await this.notificationService.notifyPlayersAboutNewJoin(data);
                 break;
 
             case 'shoot':
@@ -126,10 +126,14 @@ class WebSocketManager {
     }
 
     async sendMessageToPlayer(message, playerId) {
+        
         const ws = this.clients.get(playerId);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify(message));
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            logger.warn(`WebSocket for player ${playerId} is not open or missing`);
+            return;
         }
+        ws.send(JSON.stringify(message));
+        logger.info(`Message ${JSON.stringify(message)}`);
     }
 
     async broadcastToAll(message, senderId) {

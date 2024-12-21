@@ -1,16 +1,15 @@
 const logger = require('../utils/logger');
 const PlayerService = require('../services/PlayerService');
-const AchievementService = require('../services/AchievementService');
+const geoObjectService = require('../services/GeoObjectService');
 const RewardHistory = require('../models/RewardHistory');
 const Player = require('../models/Player');
 const gameConfig = require('../config/gameConfig');
-const geoObjectService = require('../services/GeoObjectService');
+const WebSocket = require('ws');
 
 class GeoObjectHandler {
     constructor(wsManager) {
         this.wsManager = wsManager;
         this.playerService = new PlayerService();
-        this.activeObjects = new Map();
         this.generationInterval = null;
     }
 
@@ -33,16 +32,6 @@ class GeoObjectHandler {
                     { $inc: { 'stats.geoObjectsCollected': 1 } }
                 );
 
-                // Track achievement
-                const player = await Player.findOne({ playerId });
-                if (player) {
-                    await AchievementService.trackAchievement(
-                        playerId, 
-                        'geoObjectsCollected', 
-                        player.stats.geoObjectsCollected + 1
-                    );
-                }
-
                 // Send confirmation to player
                 await this.wsManager.sendMessageToPlayer({
                     type: 'geoObjectShootConfirmed',
@@ -54,6 +43,8 @@ class GeoObjectHandler {
                 }, playerId);
 
                 logger.info(`Player ${playerId} collected geo object ${data.data.geoObject.id} for ${result.reward} tokens`);
+
+                await this.startGeoObjectGeneration(data.data.player);
             } else {
                 await this.wsManager.sendMessageToPlayer({
                     type: 'geoObjectShootRejected',
@@ -70,41 +61,38 @@ class GeoObjectHandler {
         }
     }
 
-    async startGeoObjectGeneration() {
-        if (this.generationInterval) {
-            clearInterval(this.generationInterval);
-        }
-
-        this.generationInterval = setInterval(async () => {
-            try {
-                await geoObjectService.removeExpiredObjects();
-
-                const types = ['weapon', 'target', 'powerup'];
-                const type = types[Math.floor(Math.random() * types.length)];
-                
-                const coordinate = {
-                    latitude: this.randomInRange(-90, 90),
-                    longitude: this.randomInRange(-180, 180),
-                    altitude: this.randomInRange(0, 100)
-                };
-
-                const geoObject = await geoObjectService.generateGeoObject(type, coordinate);
-                
-                // Broadcast new object to all connected players
+    async startGeoObjectGeneration(player) {
+        try {
+            if (!player || !player.location) {
+                logger.warn(`No location data for player ${player.id}`);
+                return;
+            }
+    
+            const geoObject = await geoObjectService.generateGeoObject(player.id, player.location);
+            if (geoObject) {
                 const message = {
                     type: 'newGeoObject',
-                    data: {
-                        geoObject: geoObject.toJSON()
-                    }
+                    data: geoObject
                 };
-
-                this.wsManager.broadcastToAll(message);
-                logger.info(`Generated new geo object of type ${type}`);
-                
-            } catch (error) {
-                logger.error('Error in geo object generation:', error);
+    
+                logger.info(`Attempting to send message to player ${player.id}: ${JSON.stringify(message)}`);
+    
+                const ws = this.wsManager.clients.get(player.id);
+                if (!ws) {
+                    logger.error(`WebSocket not found for player ${player.id}`);
+                    return;
+                }
+                if (ws.readyState !== WebSocket.OPEN) {
+                    logger.error(`WebSocket for player ${player.id} is not open. ReadyState: ${ws.readyState}`);
+                    return;
+                }
+    
+                await this.wsManager.sendMessageToPlayer(message, player.id);
+                logger.info(`GeoObject ${geoObject.id} sent to player ${player.id}`);
             }
-        }, 300000); // Generate every 5 minutes
+        } catch (error) {
+            logger.error('Error in geo object generation:', error);
+        }
     }
 
     stopGeoObjectGeneration() {
@@ -114,13 +102,12 @@ class GeoObjectHandler {
         }
     }
 
-    randomInRange(min, max) {
-        return Math.random() * (max - min) + min;
+    async removeAllGeoObjects(playerId) {
+        await geoObjectService.cleanupPlayerObjects(playerId)
     }
 
     async cleanup() {
         this.stopGeoObjectGeneration();
-        await geoObjectService.removeExpiredObjects();
     }
 }
 

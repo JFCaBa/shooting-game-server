@@ -5,26 +5,66 @@ const gameConfig = require('../config/gameConfig');
 
 class GeoObjectService {
     constructor() {
-        this.activeGeoObjects = new Map();
+        this.activeGeoObjects = new Map(); // player -> geoObject
     }
 
-    async generateGeoObject(type, coordinate) {
+    getRandomLocation(baseLocation, minDistance, maxDistance) {
+        // Convert distances from meters to degrees (rough approximation)
+        const metersPerDegree = 111000; // roughly 111km per degree
+        const minDeg = minDistance / metersPerDegree;
+        const maxDeg = maxDistance / metersPerDegree;
+
+        // Generate random radius between min and max
+        const radius = Math.random() * (maxDeg - minDeg) + minDeg;
+        
+        // Generate random angle
+        const angle = Math.random() * 2 * Math.PI;
+
+        // Calculate offset
+        const lat = baseLocation.latitude + (radius * Math.cos(angle));
+        const lon = baseLocation.longitude + (radius * Math.sin(angle) / Math.cos(baseLocation.latitude * Math.PI / 180));
+
+        return {
+            latitude: lat,
+            longitude: lon,
+            altitude: baseLocation.altitude || 0
+        };
+    }
+
+    async generateGeoObject(playerId, playerLocation) {
         try {
+            // Check if player already has an active object
+            const existingObject = this.activeGeoObjects.get(playerId);
+            if (existingObject) {
+                logger.info(`Player ${playerId} already has an active geo object`);
+                return null;
+            }
+
             const id = crypto.randomBytes(16).toString('hex');
-            
+            const type = gameConfig.GEO_OBJECT.TYPES[
+                Math.floor(Math.random() * gameConfig.GEO_OBJECT.TYPES.length)
+            ];
+
+            const coordinate = this.getRandomLocation(
+                playerLocation,
+                gameConfig.GEO_OBJECT.MIN_RADIUS,
+                gameConfig.GEO_OBJECT.MAX_RADIUS
+            );
+
             const geoObject = new GeoObject({
                 id,
                 type,
                 coordinate,
                 metadata: {
                     reward: this.getRewardForType(type),
-                    spawnedAt: new Date(),
-                    expiresAt: this.calculateExpiryTime(type)
+                    spawnedAt: new Date()
                 }
             });
 
             await geoObject.save();
-            this.activeGeoObjects.set(id, geoObject);
+            this.activeGeoObjects.set(playerId, geoObject);
+
+            logger.info(`Generated new geo object for player ${playerId} of type ${type}`);
             return geoObject;
         } catch (error) {
             logger.error('Error generating geo object:', error);
@@ -35,19 +75,10 @@ class GeoObjectService {
     getRewardForType(type) {
         const rewards = {
             'weapon': gameConfig.TOKENS.WEAPON || 5,
-            'target': gameConfig.TOKENS.TARGET || 10,
-            'powerup': gameConfig.TOKENS.POWERUP || 1
+            'target': gameConfig.TOKENS.TARGET || 3,
+            'powerup': gameConfig.TOKENS.POWERUP || 4
         };
         return rewards[type] || 0;
-    }
-
-    calculateExpiryTime(type) {
-        const durations = {
-            'weapon': 1800000,  // 30 minutes
-            'target': 3600000,  // 1 hour
-            'powerup': 900000   // 15 minutes
-        };
-        return new Date(Date.now() + (durations[type] || 3600000));
     }
 
     async validateGeoObjectHit(data) {
@@ -60,21 +91,15 @@ class GeoObjectService {
         }
 
         try {
-            const geoObject = this.activeGeoObjects.get(objectId);
+            const geoObject = this.activeGeoObjects.get(playerId);
 
-            if (!geoObject) {
-                logger.warn(`GeoObject ${objectId} not found or already collected`);
-                return false;
-            }
-
-            if (geoObject.metadata.expiresAt && geoObject.metadata.expiresAt < new Date()) {
-                logger.warn(`GeoObject ${objectId} has expired`);
-                await this.removeGeoObject(objectId);
+            if (!geoObject || geoObject.id !== objectId) {
+                logger.warn(`GeoObject ${objectId} not found or doesn't belong to player ${playerId}`);
                 return false;
             }
 
             // Remove from memory and database
-            this.activeGeoObjects.delete(objectId);
+            this.activeGeoObjects.delete(playerId);
             await GeoObject.findOneAndDelete({ id: objectId });
 
             logger.info(`GeoObject ${objectId} successfully collected by player ${playerId}`);
@@ -88,21 +113,16 @@ class GeoObjectService {
         }
     }
 
-    async removeGeoObject(objectId) {
+    async cleanupPlayerObjects(playerId) {
         try {
-            this.activeGeoObjects.delete(objectId);
-            await GeoObject.findOneAndDelete({ id: objectId });
-        } catch (error) {
-            logger.error('Error removing geo object:', error);
-        }
-    }
-
-    async removeExpiredObjects() {
-        const now = new Date();
-        for (const [id, geoObject] of this.activeGeoObjects.entries()) {
-            if (geoObject.metadata.expiresAt && geoObject.metadata.expiresAt < now) {
-                await this.removeGeoObject(id);
+            const geoObject = this.activeGeoObjects.get(playerId);
+            if (geoObject) {
+                this.activeGeoObjects.delete(playerId);
+                await GeoObject.findOneAndDelete({ id: geoObject.id });
+                logger.info(`Cleaned up geo object for player ${playerId}`);
             }
+        } catch (error) {
+            logger.error(`Error cleaning up geo objects for player ${playerId}:`, error);
         }
     }
 }
