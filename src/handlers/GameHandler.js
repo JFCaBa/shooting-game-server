@@ -287,7 +287,12 @@ class GameHandler {
                 try {
                     await Player.findOneAndUpdate(
                         { playerId: playerId },
-                        { $set: { location: updatedLocation } },
+                        { 
+                            $set: { 
+                                location: updatedLocation,
+                                lastActive: new Date() // Update lastActive to the current timestamp
+                            }
+                        },
                         { new: true } // Return the updated document
                     );
                 } catch (error) {
