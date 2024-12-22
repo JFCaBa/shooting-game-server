@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const locationSchema = require('./Location');
 
 const playerSchema = new mongoose.Schema({
     playerId: {
@@ -8,7 +9,7 @@ const playerSchema = new mongoose.Schema({
     },
     kind: {
         type: String,
-        require: false,
+        required: false,
         default: "player"
     },
     walletAddress: {
@@ -30,7 +31,7 @@ const playerSchema = new mongoose.Schema({
         deaths: { type: Number, default: 0 },
         droneHits: { type: Number, default: 0 },
         survivalStart: { type: Date, default: Date.now },
-        accuracy: {type: Number, default: 0}
+        accuracy: { type: Number, default: 0 }
     },
     lastActive: {
         type: Date,
@@ -47,6 +48,10 @@ const playerSchema = new mongoose.Schema({
     lastUpdate: {
         type: Date,
         default: Date.now
+    },
+    location: {
+        type: locationSchema, 
+        default: () => ({})
     }
 });
 

@@ -67,18 +67,12 @@ class WebSocketManager {
     }
 
     async handleMessage(data, playerId, senderId, ws) {
-        logger.info('Message received:', {
-            type: data.type,
-            from: playerId,
-            to: senderId
-        });
-
         switch (data.type) {
             case 'join':
                 if (data.pushToken) {
                     await this.updatePlayerPushToken(playerId, data.pushToken);
                 }
-                this.gameHandler.handleJoin(data, playerId, ws);
+                await this.gameHandler.handleJoin(data.data, playerId, ws);
                 await this.notificationService.notifyPlayersAboutNewJoin(data);
                 await this.geoObjectHandler.startGeoObjectGeneration(data);
                 break;
