@@ -267,49 +267,71 @@ class GameHandler {
         }
     }
 
-    handleJoin(data, playerId, ws) {
-        if (!this.wsManager.clients.has(playerId)) {
+    async handleJoin(data, playerId, ws) {
+        if (!this.wsManager.clients.has(playerId)) {    
             logger.info(`Registering new player: ${playerId}`);
-    
+        
             // Add the new player to WebSocket manager
             this.wsManager.clients.set(playerId, ws);
     
-            // Fetch or create the player in the database
-            this.playerService.getPlayer(playerId)  // This will create the player if not found
-                .then(() => {
-                    // Initialize player stats
-                    this.initPlayerStats(playerId);
-                    
-                    // Start tracking survival
-                    this.startSurvivalTracking(playerId);
-
-                    // Send current players to the joining player
-                    const currentPlayers = [];
-                    this.wsManager.clients.forEach((_, id) => {
-                        if (id !== playerId) {
-                            const playerData = this.getPlayerStats(id);
-                            currentPlayers.push({
-                                type: 'announced',
-                                kind: 'player',
-                                playerId: id,
-                                data: { player: playerData },
-                                timestamp: new Date().toISOString()
-                            });
-                        }
-                    });
-
-                    // Send existing players to new player
-                    currentPlayers.forEach(playerData => {
-                        ws.send(JSON.stringify(playerData));
-                    });
-                })
-                .catch((error) => {
-                    logger.error(`Error registering new player: ${error.message}`);
+            // Update player location if provided
+            if (data.location) {
+                const updatedLocation = {
+                    latitude: data.location.latitude,
+                    longitude: data.location.longitude,
+                    accuracy: data.location.accuracy,
+                    altitude: data.location.altitude,
+                    updatedAt: new Date()
+                };
+    
+                try {
+                    await Player.findOneAndUpdate(
+                        { playerId: playerId },
+                        { $set: { location: updatedLocation } },
+                        { new: true } // Return the updated document
+                    );
+                } catch (error) {
+                    logger.error(`Error updating player location: ${error.message}`);
+                }
+            }
+    
+            try {
+                // Fetch or create the player in the database
+                await this.playerService.getPlayer(playerId);
+    
+                // Initialize player stats
+                this.initPlayerStats(playerId);
+    
+                // Start tracking survival
+                this.startSurvivalTracking(playerId);
+    
+                // Send current players to the joining player
+                const currentPlayers = [];
+                this.wsManager.clients.forEach((_, id) => {
+                    if (id !== playerId) {
+                        const playerData = this.getPlayerStats(id);
+                        currentPlayers.push({
+                            type: 'announced',
+                            kind: 'player',
+                            playerId: id,
+                            data: { player: playerData },
+                            timestamp: new Date().toISOString()
+                        });
+                    }
                 });
+    
+                // Send existing players to the new player
+                currentPlayers.forEach(playerData => {
+                    ws.send(JSON.stringify(playerData));
+                });
+            } catch (error) {
+                logger.error(`Error registering new player: ${error.message}`);
+            }
         } else {
             logger.info(`Player ${playerId} is already connected.`);
         }
     
+        // Broadcast the join message to all clients
         this.wsManager.broadcastToAll(data, playerId);
     }
 }
