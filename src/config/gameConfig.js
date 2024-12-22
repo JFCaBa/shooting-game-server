@@ -4,9 +4,9 @@ const gameConfig = {
         KILL: 5,
         DRONE: 2,
         AD: 10,
-        WEAPON: 5,
-        TARGET: 10,
-        POWERUP: 1
+        WEAPON: 50,
+        TARGET: 100,
+        POWERUP: 10
     },
     MAX_DRONES_PER_PLAYER: 5,
     ACHIEVEMENT_MILESTONES: {

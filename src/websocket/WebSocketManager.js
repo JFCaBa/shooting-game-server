@@ -46,6 +46,7 @@ class WebSocketManager {
         ws.on('message', async (message) => {
             try {
                 const data = JSON.parse(message);
+                logger.info(`Received message from ${ip}: ${JSON.stringify(data)}`);
                 playerId = data.playerId;
                 const senderId = data.senderId || null; // Use senderId if available; otherwise, set to null                
                 await this.handleMessage(data, playerId, senderId, ws); // Pass senderId to handleMessage
@@ -69,7 +70,7 @@ class WebSocketManager {
                 if (data.pushToken) {
                     await this.updatePlayerPushToken(playerId, data.pushToken);
                 }
-                await this.gameHandler.handleJoin(data.data, playerId, ws);
+                await this.gameHandler.handleJoin(data.data, ws);
                 await this.notificationService.notifyPlayersAboutNewJoin(data.data);
                 await this.geoObjectHandler.startGeoObjectGeneration(data.data);
                 break;
@@ -104,7 +105,7 @@ class WebSocketManager {
                 break;
 
             case 'geoObjectHit':
-                await this.geoObjectHandler.handleGeoObjectHit(data, playerId);
+                await this.geoObjectHandler.handleGeoObjectHit(data.data, playerId);
                 break;
             
             case 'geoObjectShootConfirmed':
