@@ -42,8 +42,8 @@ const gameConfig = {
         }
     },
     GEO_OBJECT: {
-        MIN_RADIUS: 0.001,  // 10 meters minimum distance
-        MAX_RADIUS: 0.005, // 100 meters maximum distance
+        MIN_RADIUS: 0.001,  
+        MAX_RADIUS: -0.001, 
         TYPES: ['weapon', 'target', 'powerup']
     }
 };
