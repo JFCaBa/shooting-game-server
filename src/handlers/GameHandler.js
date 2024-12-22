@@ -309,26 +309,17 @@ class GameHandler {
     
                 // Start tracking survival
                 this.startSurvivalTracking(playerId);
-    
-                // Send current players to the joining player
-                const currentPlayers = [];
-                this.wsManager.clients.forEach((_, id) => {
-                    if (id !== playerId) {
-                        const playerData = this.getPlayerStats(id);
-                        currentPlayers.push({
-                            type: 'announced',
-                            kind: 'player',
-                            playerId: id,
-                            data: { player: playerData },
-                            timestamp: new Date().toISOString()
-                        });
-                    }
-                });
-    
-                // Send existing players to the new player
-                currentPlayers.forEach(playerData => {
-                    ws.send(JSON.stringify(playerData));
-                });
+                
+                const message = {  
+                    type: 'announced',
+                    playerId: playerId,
+                    data: data,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Send joined player to the players in the game
+                await this.wsManager.broadcastToAll(message, playerId);
+
             } catch (error) {
                 logger.error(`Error registering new player: ${error.message}`);
             }
