@@ -75,10 +75,7 @@ class GeoObjectService {
         return rewards[type] || 0;
     }
 
-    async validateGeoObjectHit(data) {
-        const objectId = data.data?.geoObject?.id;
-        const playerId = data.playerId;
-
+    async validateGeoObjectHit(objectId, playerId) {
         if (!objectId || !playerId) {
             logger.warn('Missing objectId or playerId in request');
             return false;

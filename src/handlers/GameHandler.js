@@ -267,26 +267,26 @@ class GameHandler {
         }
     }
 
-    async handleJoin(data, playerId, ws) {
-        if (!this.wsManager.clients.has(playerId)) {    
-            logger.info(`Registering new player: ${playerId}`);
+    async handleJoin(player, ws) {
+        if (!this.wsManager.clients.has(player.playerId)) {    
+            logger.info(`Registering new player: ${player.playerId}`);
         
             // Add the new player to WebSocket manager
-            this.wsManager.clients.set(playerId, ws);
+            this.wsManager.clients.set(player.playerId, ws);
     
             // Update player location if provided
-            if (data.location) {
+            if (player.location) {
                 const updatedLocation = {
-                    latitude: data.location.latitude,
-                    longitude: data.location.longitude,
-                    accuracy: data.location.accuracy,
-                    altitude: data.location.altitude,
+                    latitude: player.location.latitude,
+                    longitude: player.location.longitude,
+                    accuracy: player.location.accuracy,
+                    altitude: player.location.altitude,
                     updatedAt: new Date()
                 };
     
                 try {
                     await Player.findOneAndUpdate(
-                        { playerId: playerId },
+                        { playerId: player.playerId },
                         { 
                             $set: { 
                                 location: updatedLocation,
@@ -302,33 +302,33 @@ class GameHandler {
     
             try {
                 // Fetch or create the player in the database
-                await this.playerService.getPlayer(playerId);
+                await this.playerService.getPlayer(player.playerId);
     
                 // Initialize player stats
-                this.initPlayerStats(playerId);
+                this.initPlayerStats(player.playerId);
     
                 // Start tracking survival
-                this.startSurvivalTracking(playerId);
+                this.startSurvivalTracking(player.playerId);
                 
                 const message = {  
                     type: 'announced',
-                    playerId: playerId,
-                    data: data,
+                    playerId: player.playerId,
+                    data: player,
                     timestamp: new Date().toISOString()
                 };
 
                 // Send joined player to the players in the game
-                await this.wsManager.broadcastToAll(message, playerId);
+                await this.wsManager.broadcastToAll(message, player.playerId);
 
             } catch (error) {
                 logger.error(`Error registering new player: ${error.message}`);
             }
         } else {
-            logger.info(`Player ${playerId} is already connected.`);
+            logger.info(`Player ${player.playerId} is already connected.`);
         }
     
         // Broadcast the join message to all clients
-        this.wsManager.broadcastToAll(data, playerId);
+        this.wsManager.broadcastToAll(player, player.playerId);
     }
 }
 

@@ -9,7 +9,7 @@ const rewardHistorySchema = new mongoose.Schema({
     rewardType: {
         type: String,
         required: true,
-        enum: ['HIT', 'KILL', 'AD_WATCH', 'DAILY_LOGIN', 'ACHIEVEMENT', 'DRONE']
+        enum: ['HIT', 'KILL', 'AD_WATCH', 'DAILY_LOGIN', 'ACHIEVEMENT', 'DRONE', 'GEO_OBJECT']
     },
     amount: {
         type: Number,

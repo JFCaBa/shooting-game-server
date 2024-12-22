@@ -14,12 +14,13 @@ class GeoObjectHandler {
     }
 
     async handleGeoObjectHit(data, playerId) {
+        logger.info(`Player ${playerId} hit geo object ${data.id}`);
         try {
-            const result = await geoObjectService.validateGeoObjectHit(data);
+            const result = await geoObjectService.validateGeoObjectHit(data.id, playerId);
             
             if (result.success) {
                 // Update player's balance and save reward history
-                await this.playerService.updateBalance(playerId, result.reward);
+                await this.playerService.updateMintedBalance(playerId, result.reward);
                 await new RewardHistory({
                     playerId,
                     rewardType: 'GEO_OBJECT',
@@ -36,21 +37,17 @@ class GeoObjectHandler {
                 await this.wsManager.sendMessageToPlayer({
                     type: 'geoObjectShootConfirmed',
                     playerId: playerId,
-                    data: {
-                        geoObject: data.data.geoObject,
-                        reward: result.reward
-                    }
+                    data
                 }, playerId);
 
-                logger.info(`Player ${playerId} collected geo object ${data.data.geoObject.id} for ${result.reward} tokens`);
+                logger.info(`Player ${playerId} collected geo object ${data.id} for ${result.reward} tokens`);
 
-                await this.startGeoObjectGeneration(data.data.player);
             } else {
                 await this.wsManager.sendMessageToPlayer({
                     type: 'geoObjectShootRejected',
                     playerId: playerId,
-                    data: {
-                        geoObject: data.data.geoObject,
+                    data,
+                    metadata: {
                         reason: 'Object not found or already collected'
                     }
                 }, playerId);
