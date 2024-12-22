@@ -63,12 +63,12 @@ class GeoObjectHandler {
 
     async startGeoObjectGeneration(player) {
         try {
-            if (!player || !player.data.location) {
+            if (!player || !player.location) {
                 logger.warn(`No location data for player ${player.playerId}`);
                 return;
             }
     
-            const geoObject = await geoObjectService.generateGeoObject(player.playerId, player.data.location);
+            const geoObject = await geoObjectService.generateGeoObject(player.playerId, player.location);
             if (geoObject) {
                 const message = {
                     type: 'newGeoObject',

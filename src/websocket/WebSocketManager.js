@@ -47,10 +47,7 @@ class WebSocketManager {
             try {
                 const data = JSON.parse(message);
                 playerId = data.playerId;
-                const senderId = data.senderId || null; // Use senderId if available; otherwise, set to null
-                
-                logger.info(`Received: ${message}`);
-                
+                const senderId = data.senderId || null; // Use senderId if available; otherwise, set to null                
                 await this.handleMessage(data, playerId, senderId, ws); // Pass senderId to handleMessage
             } catch (error) {
                 logger.error(`Error processing message from ${ip}: ${error.message}`);
@@ -73,8 +70,8 @@ class WebSocketManager {
                     await this.updatePlayerPushToken(playerId, data.pushToken);
                 }
                 await this.gameHandler.handleJoin(data.data, playerId, ws);
-                await this.notificationService.notifyPlayersAboutNewJoin(data);
-                await this.geoObjectHandler.startGeoObjectGeneration(data);
+                await this.notificationService.notifyPlayersAboutNewJoin(data.data);
+                await this.geoObjectHandler.startGeoObjectGeneration(data.data);
                 break;
 
             case 'shoot':
