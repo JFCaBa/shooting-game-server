@@ -1,4 +1,3 @@
-// game-server/src/controllers/droneConfigController.js
 const DroneConfig = require('../models/DroneConfig');
 
 exports.getConfig = async (req, res) => {

@@ -1,24 +1,24 @@
 require('dotenv').config();
 const connectDB = require('./config/database');
 const express = require('express');
-const https = require('https'); // Use https instead of http
-const fs = require('fs');
 const cors = require('cors');
 const helmet = require('helmet');
+const https = require('https'); 
+const fs = require('fs');
 const WebSocketManager = require('./websocket/WebSocketManager');
 
 const playerRoutes = require('./routes/playerRoutes');
 const achievementRoutes = require('./routes/achievementRoutes');
 const hallOfFameRoutes = require('./routes/hallOfFameRoutes');
-
-const authRoutes = require('./routes/authRoutes');
-const authMiddleware = require('./middleware/authMiddleware');
 const droneConfigRoutes = require('./routes/droneConfigRoutes');
+const authRoutes = require('./routes/authRoutes');
+const geoObjectRoutes = require('./routes/geoObjectRoutes');
+
+const authMiddleware = require('./middleware/authMiddleware');
+const serviceAuthMiddleware = require('./middleware/serviceAuthMiddleware');
+
 const cleanupJob = require('./jobs/cleanUpJobs');
-
-
 const logger = require('./utils/logger');
-
 const app = express();
 
 // Load SSL certificates
@@ -50,7 +50,8 @@ app.use('/api/v1', hallOfFameRoutes);
 app.use('/api/v1', droneConfigRoutes);
 
 // Protected Routes - all these routes will require authentication
-app.use('/api/drone-config', authMiddleware, droneConfigRoutes);
+app.use('/api/drone-config', serviceAuthMiddleware, droneConfigRoutes);
+app.use('/api/v1', serviceAuthMiddleware, geoObjectRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {

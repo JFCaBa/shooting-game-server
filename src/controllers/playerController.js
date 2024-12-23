@@ -4,7 +4,6 @@ const logger = require('../utils/logger');
 const Player = require('../models/Player');
 const gameConfig = require('../config/gameConfig');
 
-
 const playerService = new PlayerService();  // Instantiate the class
 
 exports.getTokenBalance = async (req, res) => {
