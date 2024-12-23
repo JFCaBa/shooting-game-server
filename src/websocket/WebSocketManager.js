@@ -46,7 +46,7 @@ class WebSocketManager {
         ws.on('message', async (message) => {
             try {
                 const data = JSON.parse(message);
-                logger.info(`Received message from ${ip}: ${JSON.stringify(data)}`);
+                // logger.info(`Received message from ${ip}: ${JSON.stringify(data)}`);
                 playerId = data.playerId;
                 const senderId = data.senderId || null; // Use senderId if available; otherwise, set to null                
                 await this.handleMessage(data, playerId, senderId, ws); // Pass senderId to handleMessage

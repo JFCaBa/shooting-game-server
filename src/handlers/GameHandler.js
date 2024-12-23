@@ -268,7 +268,7 @@ class GameHandler {
     }
 
     async handleJoin(player, ws) {
-        if (!this.wsManager.clients.has(player.playerId)) {    
+        if (player.playerId && !this.wsManager.clients.has(player.playerId)) {
             logger.info(`Registering new player: ${player.playerId}`);
         
             // Add the new player to WebSocket manager

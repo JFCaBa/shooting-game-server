@@ -99,7 +99,7 @@ class DroneService {
                 await Drone.findOneAndDelete({ droneId: drone.droneId }); // Remove from database
             }
 
-            logger.info(`Removed all drones for player ${playerId}`);
+            // logger.info(`Removed all drones for player ${playerId}`);
         } catch (error) {
             logger.error('Error removing player drones:', error);
         }
