@@ -6,10 +6,12 @@ exports.addGeoObject = async (req, res) => {
       const { playerId, location } = req.body;
   
       if (!playerId || !location) {
+        logger.error('Missing required fields: playerId and location');
         return res.status(400).json({ error: 'Missing required fields: playerId and location' });
       }
   
       if (!location.latitude || !location.longitude) {
+        logger.error('Invalid location: must include latitude and longitude');
         return res.status(400).json({ error: 'Invalid location: must include latitude and longitude' });
       }
   

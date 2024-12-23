@@ -1,8 +1,11 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const logger = require('../utils/logger');
+
 
 const serviceAuthMiddleware = (req, res, next) => {
     try {
+        logger.info('Request headers:', req.headers);
         const serviceKey = req.headers['service-key'];
         const serviceToken = req.headers['service-token'];
 

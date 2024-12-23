@@ -26,11 +26,11 @@ class GeoObjectService {
     async generateGeoObject(playerId, playerLocation) {
         try {
             // Check if player already has an active object
-            const existingObject = this.activeGeoObjects.get(playerId);
-            if (existingObject) {
-                logger.info(`Player ${playerId} already has an active geo object`);
-                return null;
-            }
+            // const existingObject = this.activeGeoObjects.get(playerId);
+            // if (existingObject) {
+            //     logger.info(`Player ${playerId} already has an active geo object`);
+            //     return null;
+            // }
 
             const id = crypto.randomBytes(16).toString('hex');
             // const type = gameConfig.GEO_OBJECT.TYPES[
