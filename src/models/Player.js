@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const locationSchema = require('./Location');
+const e = require('express');
 
 const playerSchema = new mongoose.Schema({
     playerId: {
@@ -13,6 +14,21 @@ const playerSchema = new mongoose.Schema({
         default: "player"
     },
     walletAddress: {
+        type: String,
+        required: false,
+        default: null
+    },
+    nickName: {
+        type: String,
+        required: false,
+        default: null
+    },
+    password: {
+        type: String,
+        required: false,
+        default: null   
+    },
+    email: {
         type: String,
         required: false,
         default: null
@@ -33,6 +49,7 @@ const playerSchema = new mongoose.Schema({
         survivalStart: { type: Date, default: Date.now },
         accuracy: { type: Number, default: 0 }
     },
+    
     lastActive: {
         type: Date,
         default: Date.now

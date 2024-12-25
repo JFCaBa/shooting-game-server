@@ -14,6 +14,34 @@ class PlayerService {
     }
   }
 
+  async addPlayerDetails(playerId, nickName, email, password) {  
+    try { 
+        const player = await Player.findOneAndUpdate(
+            { playerId },
+            { $set: { nickName, email, password } },
+            { upsert: true, new: true }           
+        );
+        return player;
+    } catch (error) {
+          logger.error(`Error adding player details for ${playerId}: ${error.message}`);
+          throw new Error('Failed to add player details');
+    }
+  }
+
+  async addWalletAddress(playerId, walletAddress) {
+    try {
+        const player = await Player.findOneAndUpdate(
+            { playerId },
+            { $set: { walletAddress } },
+            { upsert: true, new: true }
+        );
+        return player;
+    } catch (error) {
+        logger.error(`Error adding wallet address for ${playerId}: ${error.message}`);
+        throw new Error('Failed to add wallet address');
+    }
+  }
+
   // Get the token balance of a player
   async getTokenBalance(playerId) {
     try {
