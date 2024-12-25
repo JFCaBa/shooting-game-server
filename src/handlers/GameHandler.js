@@ -10,6 +10,7 @@ class GameHandler {
         this.wsManager = wsManager;
         this.playerService = new PlayerService();
         this.playerStats = new Map();
+        this.SURVIVAL_RADIUS = 0.1; // 100 meters
     }
 
     async handleKill(data, playerId, senderId) {
@@ -186,7 +187,33 @@ class GameHandler {
         this.playerStats.delete(playerId);
     }
   
-  
+    async hasNearbyPlayers(playerId) {
+        try {
+            const player = await Player.findOne({ playerId });
+            if (!player?.location?.latitude || !player?.location?.longitude) return false;
+
+            const activePlayers = await Player.find({
+                playerId: { $ne: playerId },
+                lastActive: { $gte: new Date(Date.now() - 5 * 60000) }
+            });
+
+            const playerLat = Math.round(player.location.latitude * 1000) / 1000;
+            const playerLon = Math.round(player.location.longitude * 1000) / 1000;
+
+            return activePlayers.some(otherPlayer => {
+                if (!otherPlayer.location?.latitude || !otherPlayer.location?.longitude) return false;
+                
+                const otherLat = Math.round(otherPlayer.location.latitude * 1000) / 1000;
+                const otherLon = Math.round(otherPlayer.location.longitude * 1000) / 1000;
+
+                return playerLat === otherLat && playerLon === otherLon;
+            });
+        } catch (error) {
+            logger.error(`Error checking nearby players for ${playerId}:`, error);
+            return false;
+        }
+    }
+
     startSurvivalTracking(playerId) {
         const trackInterval = 60000; // 1 minute
         const interval = setInterval(async () => {
@@ -196,13 +223,20 @@ class GameHandler {
             }
 
             const stats = this.playerStats.get(playerId);
+            const hasNearby = await this.hasNearbyPlayers(playerId);
+
+            if (!hasNearby) {
+                stats.survivalStart = Date.now(); // Reset survival time when no players nearby
+                this.playerStats.set(playerId, stats);
+                return;
+            }
 
             // Initialize survival start if doesn't exist
             if (!stats.survivalStart) {
                 stats.survivalStart = Date.now();
                 this.playerStats.set(playerId, stats);
                 logger.info(`Initialized survival start time for player ${playerId}`);
-                return; // Skip this interval to start counting from next
+                return;
             }
 
             const startTime = new Date(stats.survivalStart).getTime();
@@ -217,7 +251,6 @@ class GameHandler {
                 return;
             }
 
-            // logger.info(`Tracking survival time for ${playerId}: ${survivalTime} seconds`);
             await AchievementService.trackAchievement(playerId, 'survivalTime', survivalTime);
         }, trackInterval);
     }
@@ -277,8 +310,8 @@ class GameHandler {
             // Update player location if provided
             if (player.location) {
                 const updatedLocation = {
-                    latitude: player.location.latitude,
-                    longitude: player.location.longitude,
+                    type: 'Point',
+                    coordinates: [player.location.longitude, player.location.latitude],
                     accuracy: player.location.accuracy,
                     altitude: player.location.altitude,
                     updatedAt: new Date()

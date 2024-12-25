@@ -3,8 +3,35 @@ const RewardHistory = require('../models/RewardHistory');
 const logger = require('../utils/logger');
 const Player = require('../models/Player');
 const gameConfig = require('../config/gameConfig');
+const { hashPassword } = require('../utils/passwordHelper');
 
-const playerService = new PlayerService();  // Instantiate the class
+const playerService = new PlayerService();  
+
+exports.addWalletAddress = async (req, res) => {
+  try {
+    const { playerId, walletAddress } = req.params;
+    
+    // Call the method
+    const { player } = await playerService.addWalletAddress(playerId, walletAddress);
+    
+    res.json({ player });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.addPlayerDetails = async (req, res) => {
+  try {
+      const { playerId, nickName, email, password } = req.params;
+      const hashedPassword = await hashPassword(password);
+      
+      const player = await playerService.addPlayerDetails(playerId, nickName, email, hashedPassword);
+      res.json({ player });
+  } catch (error) {
+      logger.error('Error adding player details:', error);
+      res.status(500).json({ error: error.message });
+  }
+};
 
 exports.getTokenBalance = async (req, res) => {
   try {
