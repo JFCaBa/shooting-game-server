@@ -7,6 +7,8 @@ const https = require('https');
 const fs = require('fs');
 const WebSocketManager = require('./websocket/WebSocketManager');
 
+const geoObjectController = require('./controllers/geoObjectController');
+
 const playerRoutes = require('./routes/playerRoutes');
 const achievementRoutes = require('./routes/achievementRoutes');
 const hallOfFameRoutes = require('./routes/hallOfFameRoutes');
@@ -41,6 +43,7 @@ app.use(express.json());
 
 // WebSocket Setup
 const wsManager = new WebSocketManager(server);
+geoObjectController.initialize(wsManager);
 
 // Public Routes
 app.use('/api/v1/auth', authRoutes);

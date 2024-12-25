@@ -22,6 +22,9 @@ const server = https.createServer(serverOptions);
 
 class WebSocketManager {
     constructor(server) {
+        if (WebSocketManager.instance) {
+            return WebSocketManager.instance;
+        }
         this.wss = new WebSocket.Server({ server });
         this.clients = new Map(); // Map of playerId -> WebSocket
         this.gameHandler = new GameHandler(this);
@@ -30,6 +33,13 @@ class WebSocketManager {
         this.notificationService = notificationService;
         this.setupWebSocket();
         this.droneHandler.startDroneGeneration();
+    }
+
+    static getInstance(server) {
+        if (!WebSocketManager.instance) {
+            WebSocketManager.instance = new WebSocketManager(server);
+        }
+        return WebSocketManager.instance;
     }
 
     setupWebSocket() {

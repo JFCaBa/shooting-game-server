@@ -29,7 +29,7 @@ class DroneHandler {
                 // Update player stats for drones
                 await Player.findOneAndUpdate(
                     { playerId },
-                    { $inc: { 'stats.dronesShot': 1 } }
+                    { $inc: { 'stats.droneHits': 1 } }
                 );
 
                 // Send confirmation to player

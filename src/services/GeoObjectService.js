@@ -33,11 +33,11 @@ class GeoObjectService {
             // }
 
             const id = crypto.randomBytes(16).toString('hex');
-            // const type = gameConfig.GEO_OBJECT.TYPES[
-            //     Math.floor(Math.random() * gameConfig.GEO_OBJECT.TYPES.length)
-            // ];
+            const type = gameConfig.GEO_OBJECT.TYPES[
+                Math.floor(Math.random() * gameConfig.GEO_OBJECT.TYPES.length)
+            ];
 
-            const type = gameConfig.GEO_OBJECT.TYPES[2];
+            // const type = gameConfig.GEO_OBJECT.TYPES[2];
 
             const coordinate = this.getRandomLocation(
                 playerLocation,
