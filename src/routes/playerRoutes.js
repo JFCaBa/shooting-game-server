@@ -6,6 +6,7 @@ const router = express.Router();
 // GET
 router.get('/players/:playerId/tokens', playerController.getTokenBalance);
 router.get('/players/:playerId/stats', playerController.getPlayerStats);
+router.get('/players/:playerId/details', playerController.getPlayerDetails);
 // POST
 router.post('/players/transfer', playerController.transferTokens);
 router.post('/players/adReward', playerController.adReward)

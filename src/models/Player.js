@@ -23,10 +23,15 @@ const playerSchema = new mongoose.Schema({
         required: false,
         default: null
     },
-    password: {
+    passwordHash: {
         type: String,
         required: false,
-        default: null   
+        default: null
+    },
+    passwordSalt: {
+        type: String,
+        required: false,
+        default: null
     },
     email: {
         type: String,

@@ -1,3 +1,5 @@
+require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const PlayerService = require('../services/PlayerService');
 const RewardHistory = require('../models/RewardHistory');
 const logger = require('../utils/logger');
@@ -20,15 +22,43 @@ exports.addWalletAddress = async (req, res) => {
   }
 };
 
+exports.getPlayerDetails = async (req, res) => {
+  try {
+    const { playerId } = req.params;
+    
+    // Call the method
+    const details = await playerService.getPlayerDetails(playerId);
+    
+    res.json({ details });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 exports.addPlayerDetails = async (req, res) => {
   try {
-      const { playerId, nickName, email, password } = req.params;
-      const hashedPassword = await hashPassword(password);
-      
-      const player = await playerService.addPlayerDetails(playerId, nickName, email, hashedPassword);
-      res.json({ player });
+      const { playerId, nickName, email, password } = req.body;
+
+      if (!password) {
+          throw new Error("Password is required");
+      }
+
+      // Hash the password
+      const { salt, hash } = hashPassword(password);
+
+      // Add player details
+      const player = await playerService.addPlayerDetails(playerId, nickName, email, hash, salt);
+
+      // Generate JWT token
+      const token = jwt.sign(
+          { playerId: player.playerId, email: player.email }, // Payload
+          process.env.JWT_SECRET, // Secret key
+      );
+
+      // Send response with player details and token
+      res.json({ token });
   } catch (error) {
-      logger.error('Error adding player details:', error);
+      console.error('Error adding player details:', error);
       res.status(500).json({ error: error.message });
   }
 };

@@ -90,7 +90,7 @@ class DroneHandler {
                         };
 
                         await this.wsManager.sendMessageToPlayer(message, playerId);
-                        // logger.info(`Generated new drone for player ${playerId}`);
+                        logger.info(`Generated new drone for player ${playerId}`);
                     }
                 }
             } catch (error) {
