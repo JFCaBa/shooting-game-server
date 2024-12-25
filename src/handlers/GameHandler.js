@@ -310,8 +310,8 @@ class GameHandler {
             // Update player location if provided
             if (player.location) {
                 const updatedLocation = {
-                    type: 'Point',
-                    coordinates: [player.location.longitude, player.location.latitude],
+                    latitude: player.location.latitude,
+                    longitude: player.location.longitude,
                     accuracy: player.location.accuracy,
                     altitude: player.location.altitude,
                     updatedAt: new Date()

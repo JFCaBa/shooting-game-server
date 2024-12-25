@@ -14,17 +14,29 @@ class PlayerService {
     }
   }
 
-  async addPlayerDetails(playerId, nickName, email, password) {  
+  async addPlayerDetails(playerId, nickName, email, passwordHash, passwordSalt) {  
     try { 
         const player = await Player.findOneAndUpdate(
             { playerId },
-            { $set: { nickName, email, password } },
+            { $set: { nickName, email, passwordHash, passwordSalt } },
             { upsert: true, new: true }           
         );
         return player;
     } catch (error) {
           logger.error(`Error adding player details for ${playerId}: ${error.message}`);
           throw new Error('Failed to add player details');
+    }
+  }
+
+  async getPlayerDetails(playerId) {
+    try {
+        const player = await Player 
+            .findOne({ playerId })        
+            .select('nickName email');
+        return player;
+    } catch (error) {
+        logger.error(`Error fetching player details for ${playerId}: ${error.message}`);
+        throw new Error('Failed to fetch player details');
     }
   }
 
