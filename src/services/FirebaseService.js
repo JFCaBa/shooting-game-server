@@ -1,4 +1,4 @@
-// src/services/FirebaseService.js
+require('dotenv').config();
 const admin = require('firebase-admin');
 const logger = require('../utils/logger');
 const path = require('path');

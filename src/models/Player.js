@@ -54,7 +54,6 @@ const playerSchema = new mongoose.Schema({
         survivalStart: { type: Date, default: Date.now },
         accuracy: { type: Number, default: 0 }
     },
-    
     lastActive: {
         type: Date,
         default: Date.now
