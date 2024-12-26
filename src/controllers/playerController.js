@@ -38,28 +38,32 @@ exports.getPlayerDetails = async (req, res) => {
 exports.addPlayerDetails = async (req, res) => {
   try {
       const { playerId, nickName, email, password } = req.body;
-
+      
       if (!password) {
-          throw new Error("Password is required");
+          return res.status(400).json({ error: "Password is required" });
       }
 
-      // Hash the password
       const { salt, hash } = hashPassword(password);
 
-      // Add player details
-      const player = await playerService.addPlayerDetails(playerId, nickName, email, hash, salt);
-
-      // Generate JWT token
-      const token = jwt.sign(
-          { playerId: player.playerId, email: player.email }, // Payload
-          process.env.JWT_SECRET, // Secret key
-      );
-
-      // Send response with player details and token
-      res.json({ token });
+      try {
+          const player = await playerService.addPlayerDetails(playerId, nickName, email, hash, salt);
+          const token = jwt.sign(
+              { playerId: player.playerId, email: player.email },
+              process.env.JWT_SECRET
+          );
+          res.json({ token });
+      } catch (error) {
+          if (error.message === 'PLAYER_HAS_EMAIL') {
+              return res.status(409).json({ error: 'Player already registered' });
+          }
+          if (error.message === 'EMAIL_EXISTS') {
+              return res.status(409).json({ error: 'Email already in use' });
+          }
+          throw error;
+      }
   } catch (error) {
       console.error('Error adding player details:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -88,7 +92,7 @@ exports.updatePlayerDetails = async (req, res) => {
       }
 
       // Add or update player details
-      const player = await playerService.addPlayerDetails(playerId, nickName, email, hash, salt);
+      const player = await playerService.updatePlayerDetails(playerId, nickName, email, hash, salt);
 
       // Generate JWT token
       const token = jwt.sign(
@@ -96,8 +100,8 @@ exports.updatePlayerDetails = async (req, res) => {
           process.env.JWT_SECRET // Secret key
       );
 
-      // Send response with player details and token
-      res.json({ token, player });
+      // Send response with token
+      res.json({ token });
   } catch (error) {
       console.error("Error updating player details:", error);
       res.status(500).json({ error: error.message });
