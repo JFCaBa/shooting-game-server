@@ -63,6 +63,47 @@ exports.addPlayerDetails = async (req, res) => {
   }
 };
 
+exports.updatePlayerDetails = async (req, res) => {
+  try {
+      const { playerId, nickName, email, password } = req.body;
+
+      let hash, salt;
+
+      if (password) {
+          // Validate the password criteria
+          const hasMinLength = password.length >= 8;
+          const hasUppercase = /[A-Z]/.test(password); // Regex for uppercase
+          const hasNumber = /\d/.test(password); // Regex for number
+
+          if (!hasMinLength || !hasUppercase || !hasNumber) {
+              return res.status(400).json({
+                  error: "Password must be at least 8 characters long, contain an uppercase letter, and include a number.",
+              });
+          }
+
+          // Hash the password
+          const hashed = hashPassword(password);
+          hash = hashed.hash;
+          salt = hashed.salt;
+      }
+
+      // Add or update player details
+      const player = await playerService.addPlayerDetails(playerId, nickName, email, hash, salt);
+
+      // Generate JWT token
+      const token = jwt.sign(
+          { playerId: player.playerId, email: player.email }, // Payload
+          process.env.JWT_SECRET // Secret key
+      );
+
+      // Send response with player details and token
+      res.json({ token, player });
+  } catch (error) {
+      console.error("Error updating player details:", error);
+      res.status(500).json({ error: error.message });
+  }
+};
+
 exports.getTokenBalance = async (req, res) => {
   try {
     const { playerId } = req.params;

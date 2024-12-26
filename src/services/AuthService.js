@@ -1,3 +1,4 @@
+require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const logger = require('../utils/logger');

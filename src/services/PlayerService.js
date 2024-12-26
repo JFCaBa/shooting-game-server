@@ -1,8 +1,24 @@
+require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const gameConfig = require('../config/gameConfig');
 const Player = require('../models/Player');
 const logger = require('../utils/logger');
 
 class PlayerService {
+
+  async verifyToken(token) {
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const player = await Player.findById(decoded.playerId);
+        if (!player) {
+            throw new Error('User not found');
+        }
+        return decoded;
+    } catch (error) {
+        logger.error('Error in verifyToken:', error);
+        throw error;
+    }
+}
 
   // Helper function to find a player
   async findPlayerById(playerId) {
@@ -15,16 +31,25 @@ class PlayerService {
   }
 
   async addPlayerDetails(playerId, nickName, email, passwordHash, passwordSalt) {  
-    try { 
+    try {
+        // Build the update object dynamically
+        const updateFields = { nickName, email };
+
+        if (passwordHash && passwordSalt) {
+            updateFields.passwordHash = passwordHash;
+            updateFields.passwordSalt = passwordSalt;
+        }
+
         const player = await Player.findOneAndUpdate(
             { playerId },
-            { $set: { nickName, email, passwordHash, passwordSalt } },
-            { upsert: true, new: true }           
+            { $set: updateFields },
+            { upsert: true, new: true }
         );
+
         return player;
     } catch (error) {
-          logger.error(`Error adding player details for ${playerId}: ${error.message}`);
-          throw new Error('Failed to add player details');
+        logger.error(`Error adding player details for ${playerId}: ${error.message}`);
+        throw new Error('Failed to add player details');
     }
   }
 
