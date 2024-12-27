@@ -9,6 +9,28 @@ const { hashPassword } = require('../utils/passwordHelper');
 
 const playerService = new PlayerService();  
 
+exports.loginPlayer = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const token = await playerService.loginPlayer(email, password);
+    res.json({ token });
+  } catch (error) {
+    res.status(401).json({ error: error.message });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email, playerId } = req.body;
+    const token = await playerService.forgotPassword(email, playerId);
+    // Send a temporary password with the token
+    const temporaryPassword = Math.random().toString(36).slice(-8); 
+    res.json({ token, temporaryPassword });
+  } catch (error) {
+    res.status(401).json({ error: error.message });
+  }
+};
+
 exports.addWalletAddress = async (req, res) => {
   try {
     const { playerId, walletAddress } = req.params;

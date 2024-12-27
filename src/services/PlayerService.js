@@ -1,14 +1,59 @@
+require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const Player = require('../models/Player');
 const logger = require('../utils/logger');
+const { hashPasswordWithSalt } = require('../utils/passwordHelper');
 
 class PlayerService {
     async findPlayerById(playerId) {
       try {
-          return await Player.findOne({ playerId });
+          return await Player.findOne({ "playerId": playerId });
       } catch (error) {
           logger.error(`Error fetching player with ID ${playerId}: ${error.message}`);
           throw new Error('Player not found');
       }
+    }
+
+    async forgotPassword(email, playerId) {
+        const player = await Player.findOne({ "email": email, "playerId": playerId });
+        if (!player) {
+          throw new Error('Player not found'); 
+        }
+        const token = jwt.sign(
+          { playerId: player.playerId, email: player.email },
+          process.env.JWT_SECRET,
+          { expiresIn: '1h' }
+        );  
+        
+        return token;
+    }
+
+    async loginPlayer(email, password) {
+        try {
+            const player = await Player.findOne ({ "email": email });  
+            if (!player) {    
+                logger.error(`Player email ${email}, not found`)
+                throw new Error('Player not found');  
+            }
+            const isValid = hashPasswordWithSalt(password, player.passwordSalt) === player.passwordHash;
+            if (!isValid) {
+              logger.error(`Player hash not valid`)
+              throw new Error('Player not found');  
+            }
+            await Player.updateOne(
+                { playerId: player.playerId },
+                { $set: { lastActive: new Date() }}
+            );
+            const token = jwt.sign(
+                { playerId: player.playerId, email: player.email },
+                process.env.JWT_SECRET
+            );
+            return token;  
+        }
+        catch (error) { 
+            logger.error(`Error logging in player with email ${email}: ${error.message}`);  
+            throw new Error('Player not found');  
+        }
     }
 
     async updatePlayerDetails(playerId, nickName, passwordHash, passwordSalt) {
@@ -41,14 +86,15 @@ class PlayerService {
     async addPlayerDetails(playerId, nickName, email, passwordHash, passwordSalt) {
         try {
             // Check if player already has an email
-            const currentPlayer = await Player.findOne({ playerId });
+            const currentPlayer = await this.findPlayerById(playerId);
             if (currentPlayer?.email) {
-                throw new Error('PLAYER_HAS_EMAIL');
+              logger.error(`Player has email: ${currentPlayer?.email}`)
+              throw new Error('PLAYER_HAS_EMAIL');
             }
             
             // Check if email is already used by another player
             if (email) {
-                const existingPlayer = await Player.findOne({ email });
+                const existingPlayer = await Player.findOne({ "email": email });
                 if (existingPlayer) {
                     throw new Error('EMAIL_EXISTS');
                 }
@@ -69,11 +115,8 @@ class PlayerService {
             );
             return player;
         } catch (error) {
-            if (error.message === 'EMAIL_EXISTS') {
-                throw error;
-            }
             logger.error(`Error adding player details for ${playerId}: ${error.message}`);
-            throw new Error('Failed to add player details');
+            throw error;
         }
     }
 
