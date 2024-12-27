@@ -9,4 +9,9 @@ function hashPassword(password) {
     return { salt, hash }; // Return both the salt and the hash
 }
 
-module.exports = { hashPassword };
+function hashPasswordWithSalt(password, salt) {
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return hash;
+  }
+
+module.exports = { hashPassword, hashPasswordWithSalt };
