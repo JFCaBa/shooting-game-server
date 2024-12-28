@@ -4,7 +4,10 @@ const logger = require('../utils/logger');
 
 exports.getAchievements = async (req, res) => {
     try {
-        const { playerId } = req.params;
+        let { playerId } = req.params;
+        if (!playerId) {
+            playerId = req.user.playerId
+        }
         const achievements = await RewardService.getPlayerAchievements(playerId);
         res.json(achievements);
     } catch (error) {
