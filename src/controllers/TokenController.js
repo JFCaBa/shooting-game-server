@@ -9,7 +9,7 @@ class TokenController {
     async getBalance(req, res) {
         try {
             const { walletAddress } = req.params;
-            const balance = await this.tokenService.getTokenBalance(walletAddress);
+            const balance = await this.tokenService.getBalance(walletAddress);
             res.json(balance);
         } catch (error) {
             logger.error('Error in getBalance:', error);

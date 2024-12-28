@@ -44,6 +44,18 @@ exports.addWalletAddress = async (req, res) => {
   }
 };
 
+exports.getProfile = async (req, res) => {
+  try {
+    const player = req.user;
+    if (!player) {
+        return res.status(401).json({ error: 'Player not found' });
+    }
+    res.json({ player });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
 exports.getPlayerDetails = async (req, res) => {
   try {
     const { playerId } = req.params;
@@ -129,6 +141,23 @@ exports.updatePlayerDetails = async (req, res) => {
       res.status(500).json({ error: error.message });
   }
 };
+
+exports.getBalance = async (req, res) => {
+  try {
+    const player = req.user
+    if (!player) {
+        throw new Error('Player not found');
+    }
+
+    // Call the method
+    const { mintedBalance, totalBalance } = await playerService.getTokenBalance(player.playerId);
+
+    // Respond with both balances
+    res.json({ mintedBalance, totalBalance });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 exports.getTokenBalance = async (req, res) => {
   try {
