@@ -30,6 +30,19 @@ class TokenBalanceService {
       throw error;
     }
   }
+
+  async getBalance(playerId) {
+    try {
+      const balance = await this.TokenBalance 
+        .findOne({ playerId })
+        .select('mintedBalance pendingBalance')
+        .lean();
+        return balance;
+    } catch (error) {
+      logger.error('Error getting token balance:', error);
+      throw error;
+    } 
+  }
 }
 
 module.exports = TokenBalanceService;
