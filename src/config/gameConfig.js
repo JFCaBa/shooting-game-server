@@ -42,8 +42,8 @@ const gameConfig = {
         }
     },
     GEO_OBJECT: {
-        MIN_RADIUS: 0.001,  
-        MAX_RADIUS: -0.001, 
+        MIN_RADIUS: 0.004,  
+        MAX_RADIUS: -0.004, 
         TYPES: ['weapon', 'target', 'powerup']
     }
 };

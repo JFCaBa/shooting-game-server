@@ -60,11 +60,17 @@ class GeoObjectHandler {
 
     async startGeoObjectGeneration(player) {
         try {
-            if (!player || !player.location) {
-                logger.warn(`No location data for player ${player.playerId}`);
+            if (!player || (!player.location && !player.data.location)) {
+                // Enumerate and log player properties
+                const playerProperties = Object.keys(player); 
+                logger.error(`Player object is missing location property. Player properties: ${playerProperties}`);
                 return;
             }
-    
+
+            if (player.data.location) {
+                player.location = player.data.location;
+            }
+            
             const geoObject = await geoObjectService.generateGeoObject(player.playerId, player.location);
             if (geoObject) {
                 const message = {
