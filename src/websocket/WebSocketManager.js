@@ -55,8 +55,12 @@ class WebSocketManager {
 
         ws.on('message', async (message) => {
             try {
+                if (message == 'ping') {
+                    ws.send('pong');
+                    return;
+                }
                 const data = JSON.parse(message);
-                // logger.info(`Received message from ${ip}: ${JSON.stringify(data)}`);
+                logger.info(`Received message from ${ip}: ${JSON.stringify(data)}`);
                 playerId = data.playerId;
                 const senderId = data.senderId || null; // Use senderId if available; otherwise, set to null                
                 await this.handleMessage(data, playerId, senderId, ws); // Pass senderId to handleMessage
@@ -82,7 +86,7 @@ class WebSocketManager {
                 }
                 await this.gameHandler.handleJoin(data.data, ws);
                 await this.notificationService.notifyPlayersAboutNewJoin(data.data);
-                await this.geoObjectHandler.startGeoObjectGeneration(data.data);
+                await this.geoObjectHandler.startGeoObjectGeneration(data);
                 break;
 
             case 'shoot':
@@ -129,7 +133,6 @@ class WebSocketManager {
     }
 
     async sendMessageToPlayer(message, playerId) {
-        
         const ws = this.clients.get(playerId);
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             logger.warn(`WebSocket for player ${playerId} is not open or missing`);
@@ -142,6 +145,7 @@ class WebSocketManager {
         const messageStr = JSON.stringify(message);
         this.clients.forEach((ws, playerId) => {
             if (playerId !== senderId && ws.readyState === WebSocket.OPEN) {
+                // logger.info(`Broadcasting message to player ${playerId}`);
                 ws.send(messageStr);
             }
         });
