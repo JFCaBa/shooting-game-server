@@ -5,8 +5,14 @@ const Player = require("../models/Player");
 
 class AchievementService {
   async trackAchievement(playerId, type, value) {
+    if (!playerId) {
+      return null;
+    }
+
     try {
-      // logger.info(`Tracking achievement for player ${playerId}: ${type} = ${value}`);
+      logger.info(
+        `Tracking achievement for player ${playerId}: ${type} = ${value}`
+      );
 
       const milestones = gameConfig.ACHIEVEMENT_MILESTONES[type];
       if (!milestones) {
