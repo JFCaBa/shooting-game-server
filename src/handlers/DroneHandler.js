@@ -87,27 +87,35 @@ class DroneHandler {
             continue;
           }
 
-          const drone = await droneService.generateDrone(playerId);
-          if (drone) {
-            const message = {
-              type: "newDrone",
-              playerId: playerId,
-              data: {
-                kind: "drone",
-                droneId: drone.droneId,
-                position: drone.position,
-                reward: gameConfig.TOKENS.DRONE,
-              },
-            };
-
-            await this.wsManager.sendMessageToPlayer(message, playerId);
-            logger.info(`Generated new drone for player ${playerId}`);
-          }
+          await this.generateDrone(playerId);
         }
       } catch (error) {
         logger.error(`Drone generation error: ${error.message}`);
       }
     }, 10000); // Generate every 10 seconds
+  }
+
+  async generateDrone(playerId) {
+    try {
+      const drone = await droneService.generateDrone(playerId);
+      if (drone) {
+        const message = {
+          type: "newDrone",
+          playerId: playerId,
+          data: {
+            kind: "drone",
+            droneId: drone.droneId,
+            position: drone.position,
+            reward: gameConfig.TOKENS.DRONE,
+          },
+        };
+
+        await this.wsManager.sendMessageToPlayer(message, playerId);
+        logger.info(`Generated new drone for player ${playerId}`);
+      }
+    } catch (error) {
+      logger.error(`Drone generation error: ${error.message}`);
+    }
   }
 
   stopDroneGeneration() {

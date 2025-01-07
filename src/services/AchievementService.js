@@ -69,6 +69,9 @@ class AchievementService {
   }
 
   async getPlayerAchievements(playerId) {
+    if (!playerId) {
+      return;
+    }
     try {
       return await Achievement.find({ playerId }).sort({ unlockedAt: -1 });
     } catch (error) {

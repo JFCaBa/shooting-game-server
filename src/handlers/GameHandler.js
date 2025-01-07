@@ -16,6 +16,10 @@ class GameHandler {
   // MARK: - handleKill
 
   async handleKill(data, playerId, senderId) {
+    if ((!playerId, !senderId)) {
+      return;
+    }
+
     try {
       // Get the sender's stats
       const senderStats = await this.getPlayerStats(senderId);
@@ -71,6 +75,10 @@ class GameHandler {
   // MARK: - handleHitCofirmed
 
   async handleHitConfirmed(data, senderId) {
+    if (!senderId) {
+      return;
+    }
+
     try {
       const senderStats = await this.getPlayerStats(senderId);
       if (!senderStats.hits) senderStats.hits = 0;
@@ -131,6 +139,10 @@ class GameHandler {
   // MARK: - handleShot
 
   handleShot(data, playerId) {
+    if (!playerId) {
+      return;
+    }
+
     const stats = this.getPlayerStats(playerId);
     stats.shots = (stats.shots || 0) + 1;
     this.updateAccuracy(playerId, stats);
@@ -153,6 +165,10 @@ class GameHandler {
   // MARK: - getPlayerStats
 
   async getPlayerStats(playerId) {
+    if (!playerId) {
+      return;
+    }
+
     try {
       const player = await Player.findOne({ playerId });
       if (!player) {
@@ -185,6 +201,10 @@ class GameHandler {
   // MARK: - handleShootConfirmed
 
   handleShotConfirmed(data, playerId) {
+    if (!playerId) {
+      return;
+    }
+
     const stats = this.getPlayerStats(playerId);
     stats.shots++;
     this.updateAccuracy(playerId, stats);
@@ -192,6 +212,10 @@ class GameHandler {
   // MARK: - handleDisconnect
 
   handleDisconnect(playerId) {
+    if (!playerId) {
+      return;
+    }
+
     const now = new Date().toISOString();
     const leaveMessage = {
       type: "leave",
@@ -223,6 +247,10 @@ class GameHandler {
   // MARK: - hasNearbyPlayers
 
   async hasNearbyPlayers(playerId) {
+    if (!playerId) {
+      return;
+    }
+
     try {
       const player = await Player.findOne({ playerId });
       if (!player?.location?.latitude || !player?.location?.longitude)
@@ -306,6 +334,10 @@ class GameHandler {
   // MARK: - initPlayerStats
 
   async initPlayerStats(playerId) {
+    if (!playerId) {
+      return;
+    }
+
     try {
       const existingPlayer = await Player.findOne({ playerId });
 
@@ -362,28 +394,7 @@ class GameHandler {
 
       // Update player location if provided
       if (player.location) {
-        const updatedLocation = {
-          latitude: player.location.latitude,
-          longitude: player.location.longitude,
-          accuracy: player.location.accuracy,
-          altitude: player.location.altitude,
-          updatedAt: new Date(),
-        };
-
-        try {
-          await Player.findOneAndUpdate(
-            { playerId: player.playerId },
-            {
-              $set: {
-                location: updatedLocation,
-                lastActive: new Date(), // Update lastActive to the current timestamp
-              },
-            },
-            { new: true } // Return the updated document
-          );
-        } catch (error) {
-          logger.error(`Error updating player location: ${error.message}`);
-        }
+        await this.updatePlayerLocation(player.location, player.playerId);
       }
 
       try {
@@ -394,7 +405,7 @@ class GameHandler {
         this.initPlayerStats(player.playerId);
 
         // Start tracking survival
-        this.startSurvivalTracking(player.playerId);
+        // this.startSurvivalTracking(player.playerId);
 
         const message = {
           type: "announced",
@@ -414,6 +425,35 @@ class GameHandler {
 
     // Broadcast the join message to all clients
     this.wsManager.broadcastToAll(player, player.playerId);
+  }
+
+  async updatePlayerLocation(location, playerId) {
+    if (!playerId) {
+      return;
+    }
+
+    const updatedLocation = {
+      latitude: location.latitude,
+      longitude: location.longitude,
+      accuracy: location.accuracy,
+      altitude: location.altitude,
+      updatedAt: new Date(),
+    };
+
+    try {
+      await Player.findOneAndUpdate(
+        { playerId: playerId },
+        {
+          $set: {
+            location: updatedLocation,
+            lastActive: new Date(), // Update lastActive to the current timestamp
+          },
+        },
+        { new: true } // Return the updated document
+      );
+    } catch (error) {
+      logger.error(`Error updating player location: ${error.message}`);
+    }
   }
 }
 

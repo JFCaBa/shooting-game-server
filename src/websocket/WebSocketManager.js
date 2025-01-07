@@ -78,40 +78,45 @@ class WebSocketManager {
     });
   }
 
-  async handleMessage(data, playerId, senderId, ws) {
-    switch (data.type) {
+  async handleMessage(message, playerId, senderId, ws) {
+    switch (message.type) {
       case "join":
-        if (data.pushToken) {
-          await this.updatePlayerPushToken(playerId, data.pushToken);
+        if (message.pushToken) {
+          await this.updatePlayerPushToken(playerId, message.pushToken);
         }
-        await this.gameHandler.handleJoin(data.data, ws);
-        await this.notificationService.notifyPlayersAboutNewJoin(data.data);
-        await this.geoObjectHandler.startGeoObjectGeneration(data);
+        await this.gameHandler.handleJoin(message.data, ws);
+        await this.notificationService.notifyPlayersAboutNewJoin(message.data);
+        await this.geoObjectHandler.startGeoObjectGeneration(message);
         break;
 
       case "shoot":
-        this.gameHandler.handleShot(data, playerId);
-        this.broadcastToAll(data, playerId);
+        this.gameHandler.handleShot(message, playerId);
+        await this.gameHandler.updatePlayerLocation(
+          message.data.location,
+          message.data.playerId
+        );
+        await this.geoObjectHandler.startGeoObjectGeneration(message);
+        this.broadcastToAll(message, playerId);
         break;
 
       case "shootConfirmed":
-        this.gameHandler.handleShotConfirmed(data, playerId);
-        this.sendMessageToPlayer(data, senderId);
+        this.gameHandler.handleShotConfirmed(message, playerId);
+        this.sendMessageToPlayer(message, senderId);
         break;
 
       case "hit":
         break;
 
       case "hitConfirmed":
-        this.gameHandler.handleHitConfirmed(data, senderId);
+        this.gameHandler.handleHitConfirmed(message, senderId);
         break;
 
       case "kill":
-        this.gameHandler.handleKill(data, playerId, senderId);
+        this.gameHandler.handleKill(message, playerId, senderId);
         break;
 
       case "shootDrone":
-        await this.droneHandler.handleShotDrone(data, playerId);
+        await this.droneHandler.handleShotDrone(message, playerId);
         break;
 
       case "removeDrones":
@@ -119,15 +124,15 @@ class WebSocketManager {
         break;
 
       case "geoObjectHit":
-        await this.geoObjectHandler.handleGeoObjectHit(data.data, playerId);
+        await this.geoObjectHandler.handleGeoObjectHit(message.data, playerId);
         break;
 
       case "geoObjectShootConfirmed":
-        await this.sendMessageToPlayer(data, playerId);
+        await this.sendMessageToPlayer(message, playerId);
         break;
 
       case "geoObjectShootRejected":
-        await this.sendMessageToPlayer(data, playerId);
+        await this.sendMessageToPlayer(message, playerId);
         break;
     }
   }
