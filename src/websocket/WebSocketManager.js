@@ -85,17 +85,21 @@ class WebSocketManager {
           await this.updatePlayerPushToken(playerId, message.pushToken);
         }
         await this.gameHandler.handleJoin(message.data, ws);
-        await this.notificationService.notifyPlayersAboutNewJoin(message.data);
-        await this.geoObjectHandler.startGeoObjectGeneration(message);
+        if (playerId && !this.clients.has(playerId)) {
+          await this.notificationService.notifyPlayersAboutNewJoin(
+            message.data
+          );
+          await this.geoObjectHandler.startGeoObjectGeneration(message);
+        }
         break;
 
       case "shoot":
-        this.gameHandler.handleShot(message, playerId);
+        await this.gameHandler.handleShot(message, playerId);
         await this.gameHandler.updatePlayerLocation(
           message.data.location,
           message.data.playerId
         );
-        await this.geoObjectHandler.startGeoObjectGeneration(message);
+        await this.geoObjectHandler.startGeoObjectGeneration(message.data);
         this.broadcastToAll(message, playerId);
         break;
 
@@ -133,6 +137,10 @@ class WebSocketManager {
 
       case "geoObjectShootRejected":
         await this.sendMessageToPlayer(message, playerId);
+        break;
+
+      case "reload":
+        await this.gameHandler.handleReload(playerId);
         break;
     }
   }
