@@ -12,6 +12,8 @@ class DroneHandler {
     this.droneGenerationInterval = null;
   }
 
+  // MARK: - handleShotDrone
+
   async handleShotDrone(data, playerId) {
     try {
       const isValid = await droneService.validateDroneShot(data);
@@ -74,6 +76,7 @@ class DroneHandler {
     }
   }
 
+  // MARK: - startDroneGeneration
   startDroneGeneration() {
     if (this.droneGenerationInterval) {
       clearInterval(this.droneGenerationInterval);
@@ -95,6 +98,8 @@ class DroneHandler {
     }, 10000); // Generate every 10 seconds
   }
 
+  // MARK: - generateDrone
+
   async generateDrone(playerId) {
     try {
       const drone = await droneService.generateDrone(playerId);
@@ -111,12 +116,14 @@ class DroneHandler {
         };
 
         await this.wsManager.sendMessageToPlayer(message, playerId);
-        logger.info(`Generated new drone for player ${playerId}`);
+        // logger.info(`Generated new drone for player ${playerId}`);
       }
     } catch (error) {
       logger.error(`Drone generation error: ${error.message}`);
     }
   }
+
+  // MARK: - stopDroneGeneration
 
   stopDroneGeneration() {
     if (this.droneGenerationInterval) {
@@ -125,6 +132,7 @@ class DroneHandler {
     }
   }
 
+  // MARK: - removePlayerDrones
   async removePlayerDrones(playerId) {
     if (!playerId) {
       return;
@@ -136,6 +144,8 @@ class DroneHandler {
       logger.error(`Error removing drones for player ${playerId}:`, error);
     }
   }
+
+  // MARK: - cleanup
 
   async cleanup() {
     this.stopDroneGeneration();

@@ -8,6 +8,8 @@ class GeoObjectService {
     this.activeGeoObjects = new Map(); // player -> geoObject
   }
 
+  // MARK: - getRandomLocation
+
   getRandomLocation(baseLocation, minDistance, maxDistance) {
     // Generate a random offset between minDistance and maxDistance
     const getRandomOffset = () =>
@@ -24,6 +26,8 @@ class GeoObjectService {
       altitude: baseLocation.altitude || 0,
     };
   }
+
+  // MARK: - generateGeoObject
 
   async generateGeoObject(playerId, playerLocation) {
     try {
@@ -60,15 +64,17 @@ class GeoObjectService {
       await geoObject.save();
       this.activeGeoObjects.set(playerId, geoObject);
 
-      logger.info(
-        `Generated new geo object for player ${playerId} of type ${type}`
-      );
+      // logger.info(
+      //   `Generated new geo object for player ${playerId} of type ${type}`
+      // );
       return geoObject;
     } catch (error) {
       logger.error("Error generating geo object:", error);
       throw error;
     }
   }
+
+  // MARK: - getRewardForType
 
   getRewardForType(type) {
     const rewards = {
@@ -78,6 +84,8 @@ class GeoObjectService {
     };
     return rewards[type] || 0;
   }
+
+  // MARK: - validateGeoObjectHit
 
   async validateGeoObjectHit(objectId, playerId) {
     if (!objectId || !playerId) {
@@ -114,6 +122,8 @@ class GeoObjectService {
       return false;
     }
   }
+
+  // MARK: - cleanupPlayerObjects
 
   async cleanupPlayerObjects(playerId) {
     try {

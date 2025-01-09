@@ -13,6 +13,8 @@ class GeoObjectHandler {
     this.generationInterval = null;
   }
 
+  // MARK: - handleGeoObjectHit
+
   async handleGeoObjectHit(data, playerId) {
     logger.info(`Player ${playerId} hit geo object ${data.id}`);
     try {
@@ -68,6 +70,8 @@ class GeoObjectHandler {
     }
   }
 
+  // MARK: - startGeoObjectGeneration
+
   async startGeoObjectGeneration(player) {
     try {
       if (!player || (!player.location && !player.data.location)) {
@@ -79,8 +83,8 @@ class GeoObjectHandler {
         return;
       }
 
-      if (player.data.location) {
-        player.location = player.data.location;
+      if (player.location) {
+        player.location = player.location;
       }
 
       const geoObject = await geoObjectService.generateGeoObject(
@@ -113,6 +117,8 @@ class GeoObjectHandler {
     }
   }
 
+  // MARK: - stopGeoObjectGeneration
+
   stopGeoObjectGeneration() {
     if (this.generationInterval) {
       clearInterval(this.generationInterval);
@@ -120,9 +126,13 @@ class GeoObjectHandler {
     }
   }
 
+  // MARK: - removeAllGeoObjects
+
   async removeAllGeoObjects(playerId) {
     await geoObjectService.cleanupPlayerObjects(playerId);
   }
+
+  // MARK: - clenaup
 
   async cleanup() {
     this.stopGeoObjectGeneration();

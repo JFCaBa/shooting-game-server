@@ -59,13 +59,18 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+// MARK: - getPlayer
+
 exports.getPlayerDetails = async (req, res) => {
   try {
     const { playerId } = req.params;
 
     // Call the method
     const details = await playerService.getPlayerDetails(playerId);
-
+    if (!details) {
+      logger.error(`Error getting Player Details for: ${playerId}`);
+      res.stats(404).json({ message: "Player not found" });
+    }
     res.json({ details });
   } catch (error) {
     logger.error(`Error geting player details: ${error}`);
@@ -73,12 +78,18 @@ exports.getPlayerDetails = async (req, res) => {
   }
 };
 
+// MARK: - addPlayer
+
 exports.addPlayerDetails = async (req, res) => {
   try {
-    const { playerId, nickName, email, password } = req.body;
+    const { playerId, nickname, email, password } = req.body;
 
     if (!password) {
       return res.status(400).json({ error: "Password is required" });
+    }
+
+    if (!playerId) {
+      return res.status(400).json({ error: "PlayerId is required" });
     }
 
     const { salt, hash } = hashPassword(password);
@@ -86,7 +97,7 @@ exports.addPlayerDetails = async (req, res) => {
     try {
       const player = await playerService.addPlayerDetails(
         playerId,
-        nickName,
+        nickname,
         email,
         hash,
         salt
@@ -113,7 +124,7 @@ exports.addPlayerDetails = async (req, res) => {
 
 exports.updatePlayerDetails = async (req, res) => {
   try {
-    const { playerId, nickName, email, password } = req.body;
+    const { playerId, nickname, email, password } = req.body;
 
     let hash, salt;
 
@@ -139,7 +150,7 @@ exports.updatePlayerDetails = async (req, res) => {
     // Add or update player details
     const player = await playerService.updatePlayerDetails(
       playerId,
-      nickName,
+      nickname,
       email,
       hash,
       salt
