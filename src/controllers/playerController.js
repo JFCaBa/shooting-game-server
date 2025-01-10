@@ -12,8 +12,11 @@ const playerService = new PlayerService();
 exports.loginPlayer = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const token = await playerService.loginPlayer(email, password);
-    res.json({ token });
+    const { token, playerId } = await playerService.loginPlayer(
+      email,
+      password
+    );
+    res.json({ token, playerId });
   } catch (error) {
     res.status(401).json({ error: error.message });
   }

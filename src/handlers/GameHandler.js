@@ -188,17 +188,92 @@ class GameHandler {
       return;
     }
 
-    // TODO: Remove the wrap when players updated
     const player = await Player.findOne({ playerId: playerId });
     if (player) {
-      // If `shoots` field is missing, initialize it with 0
       if (player.stats.shoots === undefined || player.stats.shoots === null) {
         player.stats.shoots = 0;
-        await player.save(); // Save the updated player document with initialized `shoots`
+        await player.save();
       }
 
+      if (
+        player.stats.currentAmmo === undefined ||
+        player.stats.currentAmmo === null
+      ) {
+        player.stats.currentAmmo = 30;
+        await player.save();
+      }
+
+      if (
+        player.stats.currentLives === undefined ||
+        player.stats.currentLives === null
+      ) {
+        player.stats.currentLives = 10;
+        await player.save();
+      }
+
+      if (
+        player.stats.accuracy === undefined ||
+        player.stats.accuracy === null
+      ) {
+        player.stats.accuracy = 0;
+        await player.save();
+      }
+
+      player.stats.currentAmmo -= 1;
+      player.stats.shoots += 1;
+
+      await player.save();
+
+      await this.updateAccuracy(playerId);
+
+      const message = {
+        type: "stats",
+        playerId,
+        data: {
+          kind: "stats",
+          ...player.stats,
+        },
+      };
+
+      await this.wsManager.sendMessageToPlayer(message, playerId);
+    }
+  }
+
+  // MARK: - updateAccuracy
+
+  async handleShot(data, playerId) {
+    if (!playerId) {
+      return;
+    }
+
+    const player = await Player.findOne({ playerId: playerId });
+    if (player) {
+      if (player.stats.shoots == null) {
+        player.stats.shoots = 0;
+        await player.save();
+      }
+
+      if (player.stats.currentAmmo == null) {
+        player.stats.currentAmmo = 30;
+        await player.save();
+      }
+
+      if (player.stats.currentLives == null) {
+        player.stats.currentLives = 10;
+        await player.save();
+      }
+
+      if (player.stats.accuracy == null) {
+        player.stats.accuracy = 0;
+        await player.save();
+      }
+
+      // Decrease ammo and increase shoots
+      player.stats.currentAmmo -= 1;
+      player.stats.shoots += 1;
+
       try {
-        // Now increment the `shoots` field
+        // Update the player's stats with increment operations
         await Player.findOneAndUpdate(
           { playerId: playerId },
           {
@@ -212,52 +287,67 @@ class GameHandler {
         logger.error(`Error handling shoot: ${error}`);
         throw error;
       }
-    }
 
-    const stats = this.getPlayerStats(playerId);
-    stats.shoots = (stats.shoots || 0) + 1;
-    await this.updateAccuracy(stats, player);
-    this.playerStats.set(playerId, stats);
+      await this.updateAccuracy(playerId);
+
+      const message = {
+        type: "stats",
+        playerId,
+        data: {
+          kind: "stats",
+          ...player.stats,
+        },
+      };
+
+      await this.wsManager.sendMessageToPlayer(message, playerId);
+    }
   }
 
-  // MARK: - updateAccuracy
+  async updateAccuracy(playerId) {
+    if (!playerId) {
+      return;
+    }
 
-  async updateAccuracy(stats, player) {
+    const player = await Player.findOne({ playerId: playerId });
+
+    if (!player) {
+      return;
+    }
+
     try {
       // Ensure the accuracy field is initialized in the player stats
-      if (typeof player.stats.accuracy === "undefined") {
+      if (player.stats.accuracy == null) {
         player.stats.accuracy = 0;
       }
 
       // Ensure stats.shoots and stats.hits are valid numbers
-      if (typeof stats.shoots !== "number" || typeof stats.hits !== "number") {
-        stats.accuracy = 0; // Default to 0 if stats are invalid
+      if (
+        player.stats.shoots == null ||
+        player.stats.hits == null ||
+        isNaN(player.stats.shoots) ||
+        isNaN(player.stats.hits)
+      ) {
+        player.stats.accuracy = 0; // Default to 0 if stats are invalid
       } else {
         // Ensure there are shoots to calculate accuracy
-        if (stats.shoots > 0) {
+        if (player.stats.shoots > 0) {
           // Avoid division by zero or NaN results
-          stats.accuracy = Math.min(
+          player.stats.accuracy = Math.min(
             100,
-            Math.round((stats.hits / stats.shoots) * 100)
+            Math.round((player.stats.hits / player.stats.shoots) * 100)
           );
         } else {
           // If there are no shoots, set accuracy to 0
-          stats.accuracy = 0;
+          player.stats.accuracy = 0;
         }
       }
 
-      // Update player's accuracy in the database
-      player.stats.accuracy = stats.accuracy;
-
-      // Save the updated player stats
       await player.save();
     } catch (error) {
       logger.error(
         `Error updating accuracy for player ${player.playerId}: ${error.message}`
       );
-      // Default to 0 if any error occurs
-      player.stats.accuracy = 0;
-      await player.save(); // Save with default accuracy
+      throw error;
     }
   }
 
@@ -281,10 +371,20 @@ class GameHandler {
           deaths: 0,
           accuracy: 0,
           survivalStart: Date.now(),
-          ammunition: 0,
+          ammunition: 30,
         };
       }
-      return player.stats || {};
+      return (
+        player.stats || {
+          shoots: player.stats.shoots || 0,
+          hits: player.stats.hits || 0,
+          kills: player.stats.kills || 0,
+          deaths: player.stats.deaths || 0,
+          accuracy: player.stats.accuracy || 0,
+          survivalStart: Date.now(),
+          ammunition: Math.max(player.stats.ammunition, 30),
+        }
+      );
     } catch (error) {
       logger.error(`Error fetching stats for player ${playerId}:`, error);
       return {
@@ -294,22 +394,11 @@ class GameHandler {
         deaths: 0,
         accuracy: 0,
         survivalStart: Date.now(),
-        ammunition: 0,
+        ammunition: 30,
       };
     }
   }
 
-  // MARK: - handleShootConfirmed
-
-  handleShotConfirmed(data, playerId) {
-    if (!playerId) {
-      return;
-    }
-
-    const stats = this.getPlayerStats(playerId);
-    stats.shoots++;
-    this.updateAccuracy(playerId, stats);
-  }
   // MARK: - handleDisconnect
 
   handleDisconnect(playerId) {
@@ -493,6 +582,8 @@ class GameHandler {
           accuracy: 0,
         },
         heading: 0,
+        currentAmmo: 30,
+        currentLives: 10,
       });
     }
   }
@@ -500,79 +591,74 @@ class GameHandler {
   // MARK: - handleJoin
 
   async handleJoin(player, ws) {
-    if (player.playerId && !this.wsManager.clients.has(player.playerId)) {
-      logger.info(`Registering new player: ${player.playerId}`);
+    if (!player.playerId) {
+      return;
+    }
 
-      // Add the new player to WebSocket manager
-      this.wsManager.clients.set(player.playerId, ws);
+    // Add the new player to WebSocket manager
+    this.wsManager.clients.set(player.playerId, ws);
 
-      try {
-        // Update player location if provided
-        if (player.location) {
-          await this.updatePlayerLocation(player.location, player.playerId);
+    try {
+      // Update player location if provided
+      if (player.location) {
+        await this.updatePlayerLocation(player.location, player.playerId);
 
-          // Announce the new joined player only to nearby players
-          const announcementMessage = {
-            type: "announced",
-            playerId: player.playerId,
-            data: player,
-            timestamp: new Date().toISOString(),
-          };
+        // Announce the new joined player only to nearby players
+        const announcementMessage = {
+          type: "announced",
+          playerId: player.playerId,
+          data: player,
+          timestamp: new Date().toISOString(),
+        };
 
-          // Fetch the list of nearby players
-          const nearbyPlayers = await this.nearByPlayers(player.playerId);
+        // Fetch the list of nearby players
+        const nearbyPlayers = await this.nearByPlayers(player.playerId);
 
-          // Send the announcement only to nearby players
-          if (nearbyPlayers.length > 0) {
-            for (const nearbyPlayer of nearbyPlayers) {
-              if (
-                nearbyPlayer.playerId !== player.playerId &&
-                nearbyPlayer.location
-              ) {
-                await this.wsManager.sendMessageToPlayer(
-                  announcementMessage,
-                  nearbyPlayer.playerId
-                );
-              }
-            }
-          }
-
-          // Send each nearby player's data to the new joined player
+        // Send the announcement only to nearby players
+        if (nearbyPlayers.length > 0) {
           for (const nearbyPlayer of nearbyPlayers) {
             if (
               nearbyPlayer.playerId !== player.playerId &&
               nearbyPlayer.location
             ) {
-              const messageToJoinedPlayer = {
-                type: "announced",
-                playerId: nearbyPlayer.playerId,
-                data: nearbyPlayer,
-                timestamp: new Date().toISOString(),
-              };
               await this.wsManager.sendMessageToPlayer(
-                messageToJoinedPlayer,
-                player.playerId
+                announcementMessage,
+                nearbyPlayer.playerId
               );
             }
           }
         }
 
-        // Fetch or create the player in the database
-        await this.playerService.getPlayer(player.playerId);
-
-        // Initialize on memory player stats
-        await this.initPlayerStats(player.playerId);
-
-        // Optionally, start survival tracking (commented out for now)
-        // this.startSurvivalTracking(player.playerId);
-      } catch (error) {
-        // Improved error handling with more detailed logging
-        const errorMessage = error?.message || "Unknown error occurred";
-        logger.error(`Error registering new player: ${errorMessage}`);
-        console.error("Complete error details:", error);
+        // Send each nearby player's data to the new joined player
+        for (const nearbyPlayer of nearbyPlayers) {
+          if (
+            nearbyPlayer.playerId !== player.playerId &&
+            nearbyPlayer.location
+          ) {
+            const messageToJoinedPlayer = {
+              type: "announced",
+              playerId: nearbyPlayer.playerId,
+              data: nearbyPlayer,
+              timestamp: new Date().toISOString(),
+            };
+            await this.wsManager.sendMessageToPlayer(
+              messageToJoinedPlayer,
+              player.playerId
+            );
+          }
+        }
       }
-    } else {
-      logger.info(`Player ${player.playerId} is already connected.`);
+
+      // Initialize on memory player stats
+      await this.initPlayerStats(player.playerId);
+
+      // Optionally, start survival tracking (commented out for now)
+      // this.startSurvivalTracking(player.playerId);
+    } catch (error) {
+      // Improved error handling with more detailed logging
+      const errorMessage = error?.message || "Unknown error occurred";
+      logger.error(`Error registering new player: ${errorMessage}`);
+      console.error("Complete error details:", error);
     }
 
     await Player.findOneAndUpdate(
@@ -618,6 +704,10 @@ class GameHandler {
 
   // MARK: - replenishAmmoAndLives
   async replenishAmmoAndLives(playerId) {
+    if (!playerId) {
+      return;
+    }
+
     try {
       // Fetch the player from the database
       const player = await Player.findOne({ playerId: playerId });

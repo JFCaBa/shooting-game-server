@@ -134,7 +134,6 @@ class DroneService {
             this.activeDrones.delete(droneId);
             await Drone.findOneAndDelete({ droneId });
             
-            logger.info(`Drone ${droneId} successfully shot and removed by player ${playerId}.`);
             return true;
         } catch (error) {
             logger.error(`Error validating drone shot for player ${playerId}:`, error);

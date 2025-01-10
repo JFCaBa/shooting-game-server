@@ -11,6 +11,10 @@ class GeoObjectService {
   // MARK: - getRandomLocation
 
   getRandomLocation(baseLocation, minDistance, maxDistance) {
+    if (!baseLocation) {
+      return;
+    }
+
     // Generate a random offset between minDistance and maxDistance
     const getRandomOffset = () =>
       minDistance + Math.random() * (maxDistance - minDistance);
@@ -30,6 +34,10 @@ class GeoObjectService {
   // MARK: - generateGeoObject
 
   async generateGeoObject(playerId, playerLocation) {
+    if (!playerId || !playerLocation) {
+      return;
+    }
+
     try {
       // Check if player already has an active object
       const existingObject = this.activeGeoObjects.get(playerId);
@@ -126,6 +134,10 @@ class GeoObjectService {
   // MARK: - cleanupPlayerObjects
 
   async cleanupPlayerObjects(playerId) {
+    if (!playerId) {
+      return;
+    }
+
     try {
       const geoObject = this.activeGeoObjects.get(playerId);
       if (geoObject) {

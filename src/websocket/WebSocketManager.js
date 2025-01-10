@@ -65,6 +65,7 @@ class WebSocketManager {
         await this.handleMessage(data, playerId, senderId, ws); // Pass senderId to handleMessage
       } catch (error) {
         logger.error(`Error processing message from ${ip}: ${error.message}`);
+        throw error;
       }
     });
 
@@ -89,7 +90,7 @@ class WebSocketManager {
           await this.notificationService.notifyPlayersAboutNewJoin(
             message.data
           );
-          await this.geoObjectHandler.startGeoObjectGeneration(message);
+          // await this.geoObjectHandler.startGeoObjectGeneration(message);
         }
         break;
 
@@ -99,24 +100,23 @@ class WebSocketManager {
           message.data.location,
           message.data.playerId
         );
-        await this.geoObjectHandler.startGeoObjectGeneration(message.data);
-        this.broadcastToAll(message, playerId);
+        // await this.geoObjectHandler.startGeoObjectGeneration(message.data);
+        await this.broadcastToAll(message, playerId);
         break;
 
       case "shootConfirmed":
-        this.gameHandler.handleShotConfirmed(message, playerId);
-        this.sendMessageToPlayer(message, senderId);
+        await this.sendMessageToPlayer(message, senderId);
         break;
 
       case "hit":
         break;
 
       case "hitConfirmed":
-        this.gameHandler.handleHitConfirmed(message, senderId);
+        await this.gameHandler.handleHitConfirmed(message, senderId);
         break;
 
       case "kill":
-        this.gameHandler.handleKill(message, playerId, senderId);
+        await this.gameHandler.handleKill(message, playerId, senderId);
         break;
 
       case "shootDrone":
