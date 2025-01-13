@@ -15,6 +15,7 @@ const hallOfFameRoutes = require("./routes/hallOfFameRoutes");
 const droneConfigRoutes = require("./routes/droneConfigRoutes");
 const authRoutes = require("./routes/authRoutes");
 const geoObjectRoutes = require("./routes/geoObjectRoutes");
+const inventoryRoutes = require("./routes/inventoryRoutes");
 
 const authMiddleware = require("./middleware/authMiddleware");
 const serviceAuthMiddleware = require("./middleware/serviceAuthMiddleware");
@@ -51,6 +52,7 @@ app.use("/api/v1", playerRoutes);
 app.use("/api/v1", achievementRoutes);
 app.use("/api/v1", hallOfFameRoutes);
 app.use("/api/v1", droneConfigRoutes);
+app.use("/api/v1", inventoryRoutes);
 
 // Protected Routes - all these routes will require authentication
 app.use("/api/drone-config", serviceAuthMiddleware, droneConfigRoutes);

@@ -1,6 +1,7 @@
 const logger = require("../utils/logger");
 const PlayerService = require("../services/PlayerService");
 const geoObjectService = require("../services/GeoObjectService");
+const InventoryService = require("../services/InventoryService");
 const RewardHistory = require("../models/RewardHistory");
 const Player = require("../models/Player");
 const gameConfig = require("../config/gameConfig");
@@ -10,10 +11,9 @@ class GeoObjectHandler {
   constructor(wsManager) {
     this.wsManager = wsManager;
     this.playerService = new PlayerService();
+    this.inventoryService = new InventoryService();
     this.generationInterval = null;
   }
-
-  // MARK: - handleGeoObjectHit
 
   async handleGeoObjectHit(data, playerId) {
     logger.info(`Player ${playerId} hit geo object ${data.id}`);
@@ -24,6 +24,12 @@ class GeoObjectHandler {
       );
 
       if (result.success) {
+        // Add item to player's inventory
+        const inventory = await this.inventoryService.addItemToInventory(
+          playerId,
+          result.geoObject
+        );
+
         // Update player's balance and save reward history
         await this.playerService.updateMintedBalance(playerId, result.reward);
         await new RewardHistory({
@@ -38,12 +44,16 @@ class GeoObjectHandler {
           { $inc: { "stats.geoObjectsCollected": 1 } }
         );
 
-        // Send confirmation to player
+        // Send confirmation to player with inventory update
         await this.wsManager.sendMessageToPlayer(
           {
             type: "geoObjectShootConfirmed",
             playerId: playerId,
-            data,
+            data: {
+              ...data,
+              inventory: inventory.items,
+              reward: result.reward,
+            },
           },
           playerId
         );
@@ -69,8 +79,6 @@ class GeoObjectHandler {
       throw error;
     }
   }
-
-  // MARK: - startGeoObjectGeneration
 
   async startGeoObjectGeneration(player) {
     if (!player || !player.playerId || !player.location) {
@@ -108,8 +116,6 @@ class GeoObjectHandler {
     }
   }
 
-  // MARK: - stopGeoObjectGeneration
-
   stopGeoObjectGeneration() {
     if (this.generationInterval) {
       clearInterval(this.generationInterval);
@@ -117,13 +123,9 @@ class GeoObjectHandler {
     }
   }
 
-  // MARK: - removeAllGeoObjects
-
   async removeAllGeoObjects(playerId) {
     await geoObjectService.cleanupPlayerObjects(playerId);
   }
-
-  // MARK: - clenaup
 
   async cleanup() {
     this.stopGeoObjectGeneration();
