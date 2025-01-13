@@ -31,7 +31,7 @@ class WebSocketManager {
     this.droneHandler = new DroneHandler(this);
     this.notificationService = notificationService;
     this.setupWebSocket();
-    this.droneHandler.startDroneGeneration();
+    // this.droneHandler.startDroneGeneration();
   }
 
   static getInstance(server) {
@@ -90,7 +90,8 @@ class WebSocketManager {
           await this.notificationService.notifyPlayersAboutNewJoin(
             message.data
           );
-          // await this.geoObjectHandler.startGeoObjectGeneration(message);
+          await this.geoObjectHandler.startGeoObjectGeneration(message);
+          await this.droneHandler.generateDrone(playerId);
         }
         break;
 
@@ -100,7 +101,8 @@ class WebSocketManager {
           message.data.location,
           message.data.playerId
         );
-        // await this.geoObjectHandler.startGeoObjectGeneration(message.data);
+        await this.geoObjectHandler.startGeoObjectGeneration(message.data);
+        await this.droneHandler.generateDrone(playerId);
         await this.broadcastToAll(message, playerId);
         break;
 
@@ -121,6 +123,7 @@ class WebSocketManager {
 
       case "shootDrone":
         await this.droneHandler.handleShotDrone(message, playerId);
+        await this.droneHandler.generateDrone(playerId);
         break;
 
       case "removeDrones":
@@ -141,6 +144,10 @@ class WebSocketManager {
 
       case "reload":
         await this.gameHandler.handleReload(playerId);
+        break;
+
+      case "recover":
+        await this.gameHandler.handleRecover(playerId);
         break;
     }
   }

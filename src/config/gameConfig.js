@@ -12,7 +12,7 @@ const gameConfig = {
     LIVES: 10,
     AMMUNITION: 30,
   },
-  MAX_DRONES_PER_PLAYER: 3,
+  MAX_DRONES_PER_PLAYER: 1,
   ACHIEVEMENT_MILESTONES: {
     kills: [10, 50, 100, 500, 1000],
     hits: [100, 500, 1000, 5000],

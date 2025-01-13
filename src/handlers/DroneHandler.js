@@ -101,6 +101,8 @@ class DroneHandler {
   // MARK: - generateDrone
 
   async generateDrone(playerId) {
+    if (!playerId) return;
+
     try {
       const drone = await droneService.generateDrone(playerId);
       if (drone) {

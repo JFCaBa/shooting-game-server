@@ -13,13 +13,36 @@ class GameHandler {
     this.SURVIVAL_RADIUS = 0.1; // 100 meters
   }
 
+  // MARK: - handleRecover
+  async handleRecover(playerId) {
+    if (!playerId) {
+      return;
+    }
+
+    const player = await Player.findOne({ playerId: playerId });
+
+    if (player) {
+      // If `currentAmmo` field is missing, initialize it
+      if (
+        player.stats.currentLives === undefined ||
+        player.stats.currentLives === null ||
+        player.stats.currentLives <= 1
+      ) {
+        player.stats.currentLives = gameConfig.STATS.LIVES;
+        logger.info(`Recovered: ${player.stats}`);
+        await player.save();
+      }
+
+      await this.handleStatsRequest(playerId);
+    }
+  }
+
   // MARK: - handleReload
   async handleReload(playerId) {
     if (!playerId) {
       return;
     }
 
-    // TODO: Remove the wrap when players updated
     const player = await Player.findOne({ playerId: playerId });
 
     if (player) {
@@ -107,7 +130,7 @@ class GameHandler {
         senderStats.kills
       );
 
-      // Notify target about the kill
+      // Notify shooter about the kill
       if (senderId && this.wsManager.clients?.has(senderId)) {
         this.wsManager.clients.get(senderId).send(JSON.stringify(data));
       }
@@ -240,68 +263,6 @@ class GameHandler {
   }
 
   // MARK: - updateAccuracy
-
-  async handleShot(data, playerId) {
-    if (!playerId) {
-      return;
-    }
-
-    const player = await Player.findOne({ playerId: playerId });
-    if (player) {
-      if (player.stats.shoots == null) {
-        player.stats.shoots = 0;
-        await player.save();
-      }
-
-      if (player.stats.currentAmmo == null) {
-        player.stats.currentAmmo = 30;
-        await player.save();
-      }
-
-      if (player.stats.currentLives == null) {
-        player.stats.currentLives = 10;
-        await player.save();
-      }
-
-      if (player.stats.accuracy == null) {
-        player.stats.accuracy = 0;
-        await player.save();
-      }
-
-      // Decrease ammo and increase shoots
-      player.stats.currentAmmo -= 1;
-      player.stats.shoots += 1;
-
-      try {
-        // Update the player's stats with increment operations
-        await Player.findOneAndUpdate(
-          { playerId: playerId },
-          {
-            $inc: {
-              "stats.shoots": 1,
-              "stats.currentAmmo": -1,
-            },
-          }
-        );
-      } catch (error) {
-        logger.error(`Error handling shoot: ${error}`);
-        throw error;
-      }
-
-      await this.updateAccuracy(playerId);
-
-      const message = {
-        type: "stats",
-        playerId,
-        data: {
-          kind: "stats",
-          ...player.stats,
-        },
-      };
-
-      await this.wsManager.sendMessageToPlayer(message, playerId);
-    }
-  }
 
   async updateAccuracy(playerId) {
     if (!playerId) {
